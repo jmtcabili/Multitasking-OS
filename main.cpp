@@ -24,7 +24,6 @@ int main() {
   
     system(CLEAR_COMMAND);
     //clear all files under logs folder
-    deleteDirectoryContents("logs");
 
     // Clear or create csopesy-log.txt
     std::ofstream logFile("csopesy-log.txt", std::ofstream::out | std::ofstream::trunc);

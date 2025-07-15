@@ -243,7 +243,7 @@ void MainConsole::startScheduler(){
          cout << "There is already a running scheduler.\n\n";
          return;
     }
-
+    this->shutdown = false;
     if (this->config.schedulerType == "fcfs") {
         this->runningScheduler = std::make_unique<Scheduler>(
             this->config.numCores, 
@@ -269,23 +269,24 @@ void MainConsole::startScheduler(){
 
         //thread for add processes
         std::thread processThread(&MainConsole::addProcesses, this); // Create a thread to add processes
-        processThread.detach(); // Detach the thread to run independently
+        processThread.detach();
     }   
 }
-void MainConsole::addProcesses(){
+void MainConsole::addProcesses() {
     int min = this->config.minInstructions;
     int max = this->config.maxInstructions;
     int batch = this->config.batchFrequency;
-    int maxProcesses = 10; //TEMPORARY LIMIT
-    int created = 0;
 
     while (true) 
     {
+
         if (cpuTick % batch != 0) 
         {
             cpuTick++;
-            break;
+            std::this_thread::sleep_for(std::chrono::milliseconds(50)); 
+            continue;
         }
+
         std::unique_lock<std::mutex> idLock(this->IDMtx); 
         std::string processName = "Main-Process" + std::to_string(this->processId);
 
@@ -305,28 +306,25 @@ void MainConsole::addProcesses(){
             delete newProcess; 
             break;
         }
-        
-        lock.unlock(); 
-        idLock.unlock();
 
-        //std::cout << "[AddProcess] Created: " << processName << " PID: " << this->processId << "\n";
-        if (this->shutdown){
+        if(this->shutdown)
+        {
             this->runningScheduler->stop();
             break;
         }
+
+        lock.unlock(); 
+        idLock.unlock();
+
         processId++;
         cpuTick++;
-        created++;
+        std::this_thread::sleep_for(std::chrono::milliseconds(100)); // slow down generation
     }
-    std::cout << "ended";
+
 }
-
 //TODO: IMPLEMENT
-
-
 void MainConsole::stopScheduler(){
-    //before null ptr ensure threads are done 
-    this->shutdown = true; 
+    this->shutdown = true;
 }
 
 void MainConsole::generateReport() {

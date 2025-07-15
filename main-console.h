@@ -29,10 +29,9 @@ class MainConsole : public IConsole{
         void createScreen(std::string& processName); 
         void loadScreen(std::string& processName);
         void listProcesses(); 
-        void setShutdown(bool status);
-        bool getShutdown();
         
     private: 
+        bool shutdown = false;
         std::unique_ptr<IMemoryAllocator> memoryAllocator;
         bool initialized = false; 
         int processId = 0; 
@@ -41,7 +40,6 @@ class MainConsole : public IConsole{
         emulatorConfig config; // Configuration for the emulator
         std::mutex schedulerMtx; 
         std::mutex IDMtx; 
-        bool shutdown; 
         int cpuTick = 0; 
 
 };

@@ -46,31 +46,38 @@ void Scheduler::coreWorker(int coreId)
     {
         Process* currentProcess = nullptr;
         {
-            std::unique_lock<std::mutex> lock(mtx); //mtx here is for processQueue
-            cv.wait(lock, [this] { return !processQueue.empty() || shutdown; });
+            std::unique_lock<std::mutex> lock(mtx);
+            cv.wait(lock, [this] {
+                return !processQueue.empty() || shutdown;
+            });
 
-            if (shutdown && processQueue.empty())
-            {
+            if (shutdown && processQueue.empty()) {
                 cores[coreId] = nullptr;
-                break;
+
+                // check if ALL cores are now idle
+                if (getUsedCores() == 0) {
+                    break; // safe to exit this core
+                } else {
+                    // wait again for the last one to exit
+                    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+                    continue;
+                }
             }
 
-            if (!processQueue.empty())
-            {
+            // If queue is not empty, assign a process
+            if (!processQueue.empty()) {
                 currentProcess = processQueue.front();
                 processQueue.pop();
                 cores[coreId] = currentProcess;
 
+                // Allocate memory if needed
                 if (currentProcess->getMemoryPtr() == nullptr) {
                     void* mem = allocator->allocate(currentProcess->getMemoryRequired(), currentProcess->getPID());
-                    if (mem == nullptr) 
-                    {
+                    if (mem == nullptr) {
                         processQueue.push(currentProcess);
                         cores[coreId] = nullptr;
                         continue;
-                    } 
-                    else 
-                    {
+                    } else {
                         currentProcess->setMemoryPtr(mem);
                     }
                 }
@@ -103,7 +110,9 @@ void Scheduler::coreWorker(int coreId)
                 }
 
                 {
+                    std::unique_lock<std::mutex> lock(mtx);
                     quantumCounter++;
+
                     allocator->snapshot(quantumCounter);
                 }
             }

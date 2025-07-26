@@ -81,7 +81,7 @@ void MainConsole::handleCommand() { //handleCommand from MainConsole class
             else if(input == "report-util"){generateReport();} //generate report
         }
     }
-    
+   
 
 }
 
@@ -276,9 +276,16 @@ void MainConsole::addProcesses() {
     int min = this->config.minInstructions;
     int max = this->config.maxInstructions;
     int batch = this->config.batchFrequency;
-
+    
+    int numProc = 0; 
     while (true) 
     {
+        if(this->shutdown || numProc >= 2)
+        {
+            this->runningScheduler->wait();
+            this->runningScheduler->stop();
+            break;
+        }
 
         if (cpuTick % batch != 0) 
         {
@@ -300,6 +307,7 @@ void MainConsole::addProcesses() {
         std::unique_lock<std::mutex> lock(schedulerMtx); 
         if (this->runningScheduler){
             this->runningScheduler->addProcess(newProcess); 
+             numProc++;
         } 
         else 
         {
@@ -307,18 +315,14 @@ void MainConsole::addProcesses() {
             break;
         }
 
-        if(this->shutdown)
-        {
-            this->runningScheduler->stop();
-            break;
-        }
 
         lock.unlock(); 
         idLock.unlock();
 
         processId++;
         cpuTick++;
-        std::this_thread::sleep_for(std::chrono::milliseconds(100)); // slow down generation
+       
+        std::this_thread::sleep_for(std::chrono::milliseconds(2000)); // slow down generation
     }
 
 }

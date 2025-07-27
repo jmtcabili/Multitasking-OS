@@ -29,6 +29,7 @@ class MainConsole : public IConsole{
         void createScreen(std::string& processName); 
         void loadScreen(std::string& processName);
         void listProcesses(); 
+        void processSMI();
         
     private: 
         bool shutdown = false;

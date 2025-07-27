@@ -26,5 +26,6 @@ private:
     std::unordered_map<size_t, bool> allocationMap;
     std::unordered_map<int, std::vector<size_t>> pidToOffsets;
 
+    mutable std::mutex mtx; //mutable for "it to be locked in const member functions"
     bool canAllocateAt(size_t index, size_t bytes) const;
 };

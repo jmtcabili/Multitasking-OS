@@ -122,5 +122,6 @@ void FlatMemoryAllocator::snapshot(int quantum) const
 }
 
  std::unordered_map<int, std::vector<size_t>> FlatMemoryAllocator::getPidOffsets() const{
+    std::lock_guard<std::mutex> lock(mtx); // Mutex since pidToOffsets will be called from core threads (core -> memory allocator.allocate())
     return pidToOffsets;
  }

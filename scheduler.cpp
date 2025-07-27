@@ -207,6 +207,22 @@ std::vector<std::string> Scheduler::getRunningProcesses()
     return status;
 }
 
+std::unordered_map<int, std::string> Scheduler::getRunningProcessDetails()
+{
+    std::unique_lock<std::mutex> lock(mtx); // Lock to safely access cores
+    std::unordered_map<int, std::string> runningDetails;
+
+    for (int i = 0; i < cores.size(); ++i)
+    {
+        if (cores[i])  // if core is working on a process
+        {
+            Process* p = cores[i];
+            runningDetails[p->getPID()] = p->getName(); 
+        }
+    }
+    return runningDetails; 
+}
+
 
 // Returns a vector of strings, each representing a finished process.
 std::vector<std::string> Scheduler::getFinishedProcesses()

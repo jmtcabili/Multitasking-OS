@@ -19,7 +19,7 @@ bool isValidCommand(const std::string& cmd){
     }
 
     if (cmd == "initialize" || (cmd.find("screen") == 0) || cmd == "scheduler-start" ||
-        cmd == "scheduler-stop" ||  cmd == "report-util" || cmd == "clear" || 
+        cmd == "scheduler-stop" ||  cmd == "report-util" || cmd == "clear" || cmd == "process-smi" ||
         cmd == "exit") {
         return true; // Valid command
     }
@@ -79,6 +79,7 @@ void MainConsole::handleCommand() { //handleCommand from MainConsole class
             }else if(input == "scheduler-start"){startScheduler();} //start the scheduler
             else if(input == "scheduler-stop"){stopScheduler();} //stop the scheduler
             else if(input == "report-util"){generateReport();} //generate report
+            else if(input == "process-smi"){processSMI();}
         }
     }
    
@@ -280,7 +281,7 @@ void MainConsole::addProcesses() {
     int numProc = 0; 
     while (true) 
     {
-        if(this->shutdown || numProc >= 2)
+        if(this->shutdown || numProc >= 2) //remove in the future
         {
             this->runningScheduler->wait();
             this->runningScheduler->stop();
@@ -383,5 +384,55 @@ void MainConsole::generateReport() {
     lock.unlock();
 }
 
+void MainConsole::processSMI(){
+    //NOTE: only considers processes running in cores, not the ones made through screen -s / -c
+    int totalCores = config.numCores;
+    int usedCores = runningScheduler->getUsedCores();
+    int availableCores = totalCores - usedCores;
+    int cpuUtilization = (totalCores > 0) ? (usedCores * 100 / totalCores) : 0;
+    size_t maxMem = config.maxMemory; 
+    size_t totalMemUsed = 0; 
 
+    std::unordered_map<int, std::vector<size_t>> pidOffsets = this->memoryAllocator->getPidOffsets(); //running process in memory
+    //get mem used 
+    for (const auto& pidPair : pidOffsets){
+        size_t size = pidPair.second.size();
+        cout << "Size: " << size << endl; 
+        totalMemUsed += size; //let's not do num pairs * memproc since not all processes will be same mem?
+    }
+    double totalMemUsedMiB = static_cast<double>(totalMemUsed);
+    double maxMemMiB = static_cast<double>(maxMem);
+    double memoryUtilPercent = (maxMem > 0) ? (totalMemUsedMiB * 100.0 / maxMemMiB) : 0.0;
+    auto running = runningScheduler->getRunningProcessDetails(); //running processes on core
+
+    cout << "\n--- CPU Report at T = " << runningScheduler->currentTimestamp() << " ---\n\n";
+
+    std::cout << "--------------------------------------------\n";
+    std::cout << "| PROCESS-SMI V01.00 Driver Version: 01.00 |\n";
+    std::cout << "--------------------------------------------\n\n";
+    
+    std::cout << "CPU-Util: " << cpuUtilization << "%\n";
+    std::cout << "Memory Usage: " << std::fixed << std::setprecision(0) << totalMemUsed << "MiB / "
+              << std::fixed << std::setprecision(0) << maxMem << "MiB\n";
+    std::cout << "Memory Util: " << std::fixed << std::setprecision(0) << memoryUtilPercent << "%\n";
+
+    std::cout << "============================================\n";
+    std::cout << "Running processes and memory usage:\n";
+    std::cout << "--------------------------------------------\n";
+    
+    if (running.empty()) {
+        cout << "  None\n";
+    } else {
+        //compare running from scheduler and memory 
+        for (const auto& pCore : running) {
+            int pid = pCore.first; 
+            if (pidOffsets.count(pid) > 0) { //if running process in core is also found in running process in memory (ensure mutex on both ends)
+                cout << pCore.second << " " << pidOffsets[pid].size() << "MiB\n";
+            } else{
+                cout << "Process in core is not in memory" << endl; 
+            }
+        }
+    }
+    cout << "\n\n";
+}
 

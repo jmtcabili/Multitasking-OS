@@ -12,13 +12,6 @@ using namespace std;
     #define CLEAR_COMMAND "clear"
 #endif
 
-void deleteDirectoryContents(const std::filesystem::path& dir)
-{
-    for (const auto& entry : std::filesystem::directory_iterator(dir)) 
-        std::filesystem::remove_all(entry.path());
-    //https://stackoverflow.com/questions/59077670/c-delete-all-files-and-subfolders-but-keep-the-directory-itself
-    //don't mind error in vscode, just compile with c++17 or later
-}
 
 int main() {
   

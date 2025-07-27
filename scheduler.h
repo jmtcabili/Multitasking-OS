@@ -26,6 +26,7 @@ public:
 
     std::vector<std::string> getCoreStatus();
     std::vector<std::string> getRunningProcesses();
+    std::unordered_map<int, std::string> getRunningProcessDetails();
     std::vector<std::string> getFinishedProcesses();
     std::string currentTimestamp(); 
     int getUsedCores();

@@ -149,6 +149,7 @@ void MainConsole::initialize(){
         this->memoryAllocator = std::make_unique<FlatMemoryAllocator>(
             this->config.maxMemory,
             this->config.memoryPerProc,
+            this->vmstat,
             this->config.memoryPerFrame
         );
     }catch(const std::exception& error){

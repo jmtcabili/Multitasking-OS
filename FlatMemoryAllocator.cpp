@@ -1,4 +1,5 @@
 #include "FlatMemoryAllocator.h"
+#include "vmstat.h"
 #include <ctime>
 #include <fstream>
 #include <iomanip>
@@ -6,9 +7,11 @@
 
 FlatMemoryAllocator::FlatMemoryAllocator(size_t maxBytes,
                                          size_t perProc,
+                                         vmstat vmstat,
                                          size_t frame)
     : totalBytes(maxBytes),
       perProcBytes(perProc),
+      vmStatObj(vmstat),
       frameBytes(frame),
       memory(maxBytes, '.')
 {

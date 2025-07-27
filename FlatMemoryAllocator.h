@@ -15,6 +15,7 @@ public:
     void  deallocate(int pid)             override;
     std::string visualizeMemory() const   override;
     void snapshot(int quantum)  const     override;
+    std::unordered_map<int, std::vector<size_t>> getPidOffsets() const override;  
 
 private:
     size_t totalBytes;

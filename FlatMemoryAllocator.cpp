@@ -121,3 +121,6 @@ void FlatMemoryAllocator::snapshot(int quantum) const
     out << "----start---- = 0\n";
 }
 
+ std::unordered_map<int, std::vector<size_t>> FlatMemoryAllocator::getPidOffsets() const{
+    return pidToOffsets;
+ }

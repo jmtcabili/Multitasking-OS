@@ -433,5 +433,6 @@ void MainConsole::processSMI(){
             }
         }
     }
+    cout << "\n\n";
 }
 

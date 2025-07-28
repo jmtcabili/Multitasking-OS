@@ -1,4 +1,4 @@
-#pragma ONCE
+#pragma once
 #include <string> 
 #include "IConsole.h"
 #include "config.h"

@@ -2,7 +2,6 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
-#include "vmstat.h"
 
 enum class AllocationStrategy { //for mo2 future proofing
     FirstFit

@@ -1,7 +1,8 @@
+#pragma ONCE
 #include <string> 
 #include "IConsole.h"
 #include "config.h"
-#include "vmstat.h"
+#include "VMstat.h"
 #include "scheduler.h"
 #include "screen-console.h"
 #include "FlatMemoryAllocator.h"
@@ -40,7 +41,7 @@ class MainConsole : public IConsole{
         std::unique_ptr<Scheduler> runningScheduler = nullptr; 
         std::map<std::string, std::unique_ptr<ScreenConsole>> screenConsoles;// Store multiple screens; let main console manage screen consoles
         emulatorConfig config; // Configuration for the emulator
-        vmstat vmstat; 
+        std::unique_ptr<VMstat> vmstat; 
         std::mutex schedulerMtx; 
         std::mutex IDMtx; 
         int cpuTick = 0; 

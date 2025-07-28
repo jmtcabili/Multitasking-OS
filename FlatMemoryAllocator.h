@@ -21,7 +21,6 @@ private:
     size_t totalBytes;
     size_t perProcBytes;
     size_t frameBytes;
-
     std::vector<char> memory;
     std::unordered_map<size_t, bool> allocationMap;
     std::unordered_map<int, std::vector<size_t>> pidToOffsets;

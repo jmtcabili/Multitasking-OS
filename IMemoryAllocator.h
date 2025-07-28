@@ -16,5 +16,5 @@ public:
     virtual std::string visualizeMemory() const = 0;
     virtual void snapshot(int quantum) const = 0;
     virtual ~IMemoryAllocator() = default;
-    virtual std::unordered_map<int, std::vector<size_t>> getPidOffsets() const = 0;    
+    virtual std::unordered_map<int, std::vector<size_t>> getPidOffsets() const = 0; 
 };

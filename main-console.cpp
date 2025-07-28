@@ -3,6 +3,7 @@
 #include <string>
 #include <sstream>
 #include "main-console.h"
+#include "VMstat.h"
 
 #ifdef _WIN32
     #define CLEAR_COMMAND "cls"
@@ -146,6 +147,7 @@ void MainConsole::initialize(){
         std::cout << "Maxmimum Frame:  " << this->config.memoryPerFrame << std::endl;
         std::cout << "Memory per Proc: " << this->config.memoryPerProc << std::endl;
 
+        this->vmstat = std::make_unique<VMstat>(); // Initialize vmstat object
         this->memoryAllocator = std::make_unique<FlatMemoryAllocator>(
             this->config.maxMemory,
             this->config.memoryPerProc,

@@ -23,7 +23,7 @@ class vmstat{
             idleCPUticks++; 
         }
 
-        int getActiveTticks() const { return activeCPUticks; }
+        int getActiveTicks() const { return activeCPUticks; }
         void addActiveTick(){
             activeCPUticks++;
         }

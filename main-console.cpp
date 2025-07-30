@@ -126,8 +126,11 @@ void MainConsole::initialize(){
                     else if (param == "mem-per-frame"){
                         this->config.memoryPerFrame = std::stoi(value);
                     }
-                    else if (param == "mem-per-proc"){
-                        this->config.memoryPerProc = std::stoi(value);
+                    else if (param == "min-mem-per-proc"){
+                        this->config.minMemProc = std::stoi(value);
+                    }
+                    else if (param == "max-mem-per-proc"){
+                        this->config.maxMemProc= std::stoi(value);
                     }
                 }
             }
@@ -145,13 +148,12 @@ void MainConsole::initialize(){
         std::cout << "Maximum Instructions: " << this->config.maxInstructions << std::endl;
         std::cout << "Maximum Memory: " << this->config.maxMemory << std::endl;
         std::cout << "Maxmimum Frame:  " << this->config.memoryPerFrame << std::endl;
-        std::cout << "Memory per Proc: " << this->config.memoryPerProc << std::endl;
+        std::cout << "Min mem per Proc: " << this->config.minMemProc << std::endl;
+        std::cout << "Max mem per Proc: " << this->config.maxMemProc << std::endl;
 
-        this->vmstat = std::make_unique<VMstat>(); // Initialize vmstat object
-        this->memoryAllocator = std::make_unique<FlatMemoryAllocator>(
+        this->memoryAllocator = std::make_unique<PagingAllocator>(
             this->config.maxMemory,
-            this->config.memoryPerProc,
-            this->config.memoryPerFrame
+            4096 //assumign 4KB
         );
     }catch(const std::exception& error){
         std::cerr << "Error reading config file: " << error.what() << std::endl;
@@ -293,7 +295,7 @@ void MainConsole::addProcesses() {
         if (cpuTick % batch != 0) 
         {
             cpuTick++;
-            std::this_thread::sleep_for(std::chrono::milliseconds(50)); 
+            std::this_thread::sleep_for(std::chrono::milliseconds(500)); 
             continue;
         }
 
@@ -303,11 +305,33 @@ void MainConsole::addProcesses() {
         ScreenConsole* screen = new ScreenConsole(this->processId, processName);  
         this->screenConsoles.insert(std::make_pair(processName, screen));  
 
-        Process* newProcess = new Process(this->processId, processName, screen, this->config.memoryPerProc);
+
+        //generate process with random memory
+        size_t min = this->config.minMemProc;
+        size_t max = this->config.maxMemProc;
+        size_t frameSize = this->config.memoryPerFrame;
+        size_t processMem = min + rand() % (max - min + 1);
+        
+        Process* newProcess = new Process(this->processId, processName, screen, processMem, frameSize);
         newProcess->test_generateRandomCommands(min, max); 
         newProcess->setState(Process::READY); 
-
+        //before process is added, write process details to backing store first
+            //write all pages but the first to the backing store
+            //write PID, process name, command counter, num pages
+        size_t numPages = newProcess->getNumPages();
+        std::ofstream out("csopesy-backing-store.txt", std::ios::app);
+        out << min << endl << max << endl << frameSize << endl << processMem << endl; 
+        out << numPages << endl; 
         std::unique_lock<std::mutex> lock(schedulerMtx); 
+        for (size_t currPage = 1; currPage < numPages; ++currPage){
+            //write to backing store
+            int pid = newProcess->getPID();
+            int cc = newProcess->getCommandCounter();
+            std::ofstream out("csopesy-backing-store.txt", std::ios::app);
+            out << pid << " " << currPage << " " << cc << endl; 
+            out.close();
+        }
+
         if (this->runningScheduler){
             this->runningScheduler->addProcess(newProcess); 
              numProc++;

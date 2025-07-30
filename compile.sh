@@ -17,7 +17,7 @@ fi
 # Compile all .cpp files and link them
 # command files 
 COMMAND_SRCS="commands/AddCommand.cpp commands/DeclareCommand.cpp commands/ForCommand.cpp commands/PrintCommand.cpp commands/SleepCommand.cpp commands/SubtractCommand.cpp"
-CORE_SRCS="main.cpp main-console.cpp screen-console.cpp scheduler.cpp process.cpp globals.cpp FlatMemoryAllocator.cpp"
+CORE_SRCS="main.cpp main-console.cpp screen-console.cpp scheduler.cpp process.cpp globals.cpp FlatMemoryAllocator.cpp PagingAllocator.cpp"
 
 "$CXX" -std=c++20 -Iinclude $CORE_SRCS $COMMAND_SRCS -o main
 

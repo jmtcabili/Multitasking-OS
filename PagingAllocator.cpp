@@ -86,6 +86,8 @@ void PagingAllocator::deallocate(int pid) {
             toFree.push_back(frame); //mark frame for freeing
         }
     }
+    //TODO: also need to find the frames that are currently being used by other processes? 
+    //can the oldest one be still be in use by other cores? 
 
     //remove frames from pageMap and add to free list
     for (size_t frame : toFree) {
@@ -112,9 +114,9 @@ std::string PagingAllocator::visualizeMemory() const {
 }
 
 //TODO:
-/*void PagingAllocator::snapshot(const std::string& filename) const {
+void PagingAllocator::snapshot(int quantum) const {
  
-}*/
+}
 
 std::unordered_map<int, std::vector<size_t>> PagingAllocator::getPidOffsets() const {
     return pidToPages;

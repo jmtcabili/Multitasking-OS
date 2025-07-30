@@ -17,9 +17,10 @@ Process::Process(int pid, std::string name, ScreenConsole* consolePtr)
 {}
 
 //constructor for memory 
-Process::Process(int pid, std::string name, ScreenConsole* consolePtr, size_t memoryRequired)
+Process::Process(int pid, std::string name, ScreenConsole* consolePtr, size_t memoryRequired, size_t frameSize)
     : pid(pid), name(name), commandCounter(0), consolePtr(consolePtr), 
-      state(READY), memoryRequired(memoryRequired)
+      state(READY), memoryRequired(memoryRequired), pageSize(frameSize),
+      numPages((memoryRequired+frameSize+1)/ frameSize)
 {}
 
 
@@ -109,6 +110,10 @@ void Process::setState(Process::ProcessState newState) {
 
 std::string Process::getFinishTime() const {
     return timeFinished;
+}
+
+size_t Process::getNumPages(){
+    return numPages;
 }
 
 // allow nested loops with 3 depth

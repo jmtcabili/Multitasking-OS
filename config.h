@@ -14,6 +14,7 @@ struct emulatorConfig{
     //memory fields
     size_t maxMemory;       
     size_t memoryPerFrame;  
-    size_t memoryPerProc;
+    size_t minMemProc; 
+    size_t maxMemProc;
 }; 
 #endif

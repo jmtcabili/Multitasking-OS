@@ -6,6 +6,7 @@
 #include "scheduler.h"
 #include "screen-console.h"
 #include "FlatMemoryAllocator.h"
+#include "PagingAllocator.h"
 #include <map>
 
 

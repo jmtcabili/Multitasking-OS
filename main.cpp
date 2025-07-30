@@ -14,7 +14,8 @@ using namespace std;
 
 
 int main() {
-  
+
+    srand(time(0));
     system(CLEAR_COMMAND);
     //clear all files under logs folder
 
@@ -25,6 +26,14 @@ int main() {
         logFile.close();
     } else {
         std::cerr << "Error: Could not create or clear csopesy-log.txt\n";
+    }
+
+    std::ofstream backing("csopesy-backing-store.txt", std::ofstream::out | std::ofstream::trunc);
+    if (backing.is_open()) {
+        backing << "--- CSOPESY BACKING STORE  ---\n\n";
+        backing.close();
+    } else {
+        std::cerr << "Error: Could not create or clear csopesy-backing-store.txt\n";
     }
     
     std::unique_ptr<IConsole> mainConsole = std::make_unique<MainConsole>();

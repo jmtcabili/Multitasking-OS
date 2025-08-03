@@ -25,7 +25,7 @@ void* PagingAllocator::allocate(Process *process) {
     }
 
     pidToPages[pid].resize(pagesNeeded); //track numpages allocated to pid
-    return reinterpret_cast<void*>(process->getPID()); // simulate pointer
+    return reinterpret_cast<void*>(process->getPID()+1); // simulate pointer
 }
 
 void PagingAllocator::handlePageFault(int pid, size_t pageNumber) {

@@ -168,7 +168,7 @@ void MainConsole::initialize(){
 
         this->memoryAllocator = std::make_unique<PagingAllocator>(
             this->config.maxMemory,
-            4096 //assumign 4KB
+            this->config.memoryPerFrame
         );
     }catch(const std::exception& error){
         std::cerr << "Error reading config file: " << error.what() << std::endl;
@@ -349,7 +349,7 @@ void MainConsole::addProcesses() {
 
         if (this->runningScheduler){
             this->runningScheduler->addProcess(newProcess); 
-             numProc++;
+            numProc++;
         } 
         else 
         {

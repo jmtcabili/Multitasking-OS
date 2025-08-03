@@ -75,6 +75,7 @@ void Scheduler::coreWorker(int coreId)
                 if (currentProcess->getMemoryPtr() == nullptr) {
                     void* mem = allocator->allocate(currentProcess);
                     if (mem == nullptr) {
+                        //std::cout << "Core " << coreId << " allocated memory for process: " << currentProcess->getPID() << std::endl;
                         processQueue.push(currentProcess);
                         cores[coreId] = nullptr;
                         continue;

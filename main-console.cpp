@@ -3,7 +3,6 @@
 #include <string>
 #include <sstream>
 #include "main-console.h"
-#include "VMstat.h"
 
 #ifdef _WIN32
     #define CLEAR_COMMAND "cls"
@@ -68,38 +67,34 @@ void MainConsole::handleCommand() { //handleCommand from MainConsole class
         } else{
             if (input.find("screen") == 0){//like hw3
                 stringstream screenCmd(input);
-                string command, option, processName;
-                screenCmd >> command >> option >> processName;
+                string command, option, processName, processMemory, processInstructions;
+                screenCmd >> command >> option >> processName >> processMemory >> processInstructions;
                 if (option == "-s"){
-                    if (processName.empty()){
-                        std::cout << "Please provide a process name. (screen -s <process_name>)\n";
-                    } else{
-                        //TODO: also check if already exists
+                    if(checkScreenInput(option, processName, processMemory, processInstructions)){
                         createScreen(processName);
                         std::cout << "Screen " << processName << " created successfully.\n";
                     }
-                }else if (option == "-r"){
-                    if (processName.empty()){
-                        std::cout << "Please provide a process name. (screen -s <process_name>)\n";
-                    } if (this->screenConsoles.count(processName) == 0) {
-                        std::cout << "Screen " << processName << " does not exist.\n";
-                    } else {
+                }
+                else if (option == "-r")
+                {
+                    if(checkScreenInput(option, processName, processMemory, processInstructions)){
                         system(CLEAR_COMMAND);
                         loadScreen(processName); // Load the screen for the process
                     }
                 }else if (option == "-ls"){
                     listProcesses();
-                }else{
-                    std::cout << "Invalid screen command. Use screen -s <process_name>, screen -r <process_name>, or screen -ls\n";
+                }else if(option == "-c"){
+                    if(checkScreenInput(option, processName, processMemory, processInstructions)){
+                        //TODO: Implement create screen with instructions
+                    }
                 }
-            }else if(input == "scheduler-start"){startScheduler();} //start the scheduler
+            }
+            else if(input == "scheduler-start"){startScheduler();} //start the scheduler
             else if(input == "scheduler-stop"){stopScheduler();} //stop the scheduler
             else if(input == "report-util"){generateReport();} //generate report
             else if(input == "process-smi"){processSMI();}
         }
     }
-   
-
 }
 
 void MainConsole::initialize(){
@@ -482,3 +477,92 @@ void MainConsole::processSMI(){
     cout << "\n\n";
 }
 
+bool MainConsole::checkScreenInput(string option, string processName, string processMemory, string processInstructions)
+{
+    if(option.empty())
+    {
+        std::cout << "Please provide a valid screen option\n";
+        return false;
+    }
+
+    else if (option == "-r")
+    {
+        if (processName.empty())
+        {
+            std::cout << "Please provide a process name. (screen -r <process_name>)\n";
+            return false;
+        }
+        else if (this->screenConsoles.count(processName) == 0) 
+        {
+            std::cout << "Screen " << processName << " does not exist.\n";
+        }
+        return true;
+    }
+
+    // Common for -s and -c
+    bool isScreenCreate = (option == "-s" || option == "-c");
+    if (isScreenCreate)
+    {
+        // Check for duplicates
+        if (this->screenConsoles.count(processName) > 0)
+        {
+            std::cout << "Screen " << processName << " already exists. Use screen -r <process_name> to load it.\n";
+            return false;
+        }
+
+        // Empty field checks
+        else if (processName.empty() || processMemory.empty())
+        {
+            std::cout << "Please provide a process name and memory size. (screen " << option << " <process_name> <memory_size>)\n";
+            return false;
+        }
+
+        // Check if memory is numeric and valid
+        int mem = 0;
+        try {
+            mem = std::stoi(processMemory);
+        } catch (...) {
+            std::cout << "Memory size must be a valid number.\n";
+            return false;
+        }
+
+        // Memory bounds check
+        if (mem < 64 || mem > 65536 || (mem & (mem - 1)) != 0)
+        {
+            std::cout << "Memory size must be a power of 2 between 64 and 65536 bytes.\n";
+            return false;
+        }
+
+        // If -c, also check instructions
+        else if (option == "-c")
+        {
+            if (processInstructions.empty())
+            {
+                std::cout << "Please provide quoted semicolon-separated instructions. (screen -c <name> <mem> \"<instructions>\")\n";
+                return false;
+            }
+
+            // Remove quotation marks
+            processInstructions.erase(std::remove(processInstructions.begin(), processInstructions.end(), '"'), processInstructions.end());
+
+            std::stringstream ss(processInstructions);
+            std::string command;
+            int count = 0;
+            while (std::getline(ss, command, ';'))
+            {
+                if (!command.empty()) ++count;
+            }
+
+            if (count < 1 || count > 50)
+            {
+                std::cout << "invalid amounts of commands\n";
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    std::cout << "Invalid screen command. Use -s, -r, or -c.\n";
+    return false;
+}

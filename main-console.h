@@ -2,7 +2,7 @@
 #include <string> 
 #include "IConsole.h"
 #include "config.h"
-#include "VMstat.h"
+#include "vmstat.h"
 #include "scheduler.h"
 #include "screen-console.h"
 #include "PagingAllocator.h"
@@ -33,6 +33,7 @@ class MainConsole : public IConsole{
         void loadScreen(std::string& processName);
         void listProcesses(); 
         void processSMI();
+        bool checkScreenInput(string option, string processName, string processMemory, string processInstructions);
         
     private: 
         bool shutdown = false;

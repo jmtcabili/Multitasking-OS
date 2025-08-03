@@ -24,7 +24,7 @@ void* PagingAllocator::allocate(Process *process) {
          handlePageFault(pid, pageNum); // demand paging
     }
 
-    // pidToPages[pid].resize(pagesNeeded); //track numpages allocated to pid
+    pidToPages[pid].resize(pagesNeeded); //track numpages allocated to pid
     return reinterpret_cast<void*>(process->getPID()); // simulate pointer
 }
 
@@ -73,7 +73,6 @@ void PagingAllocator::writeToBackingStore(int pid, size_t pageNumber) {
 
     //format: PID | Page # | command counter | cpu core assigned (-1 = not in ram/cpu)
     std::lock_guard <std::mutex> lock(backingStoreMutex); //lock for thread safety
-    std::ofstream out("csopesy-backing-store.txt", std::ios::app);
     std::ifstream backingFile("csopesy-backing-store.txt");
     std::vector<std::string> lines; //store backingstore information 
 
@@ -125,7 +124,6 @@ void PagingAllocator::loadFromBackingStore(int pid, size_t pageNumber, int coreN
     //just include cpu core to be assigned with in bs + option if write / load
     
     std::lock_guard <std::mutex> lock(backingStoreMutex); //lock for thread safety
-    std::ofstream out("csopesy-backing-store.txt", std::ios::app);
     std::ifstream backingFile("csopesy-backing-store.txt");
     std::vector<std::string> lines; //store backingstore information 
 
@@ -180,8 +178,6 @@ void PagingAllocator::deallocate(int pid) {
             toFree.push_back(frame); //mark frame for freeing
         }
     }
-    //TODO: also need to find the frames that are currently being used by other processes? 
-    //can the oldest one be still be in use by other cores? 
 
     //remove frames from pageMap and add to free list
     for (size_t frame : toFree) {
@@ -190,6 +186,8 @@ void PagingAllocator::deallocate(int pid) {
     }
 
     pidToPages.erase(pid); //remove page tracking from this process
+
+    
 }
 
 std::string PagingAllocator::visualizeMemory() const {

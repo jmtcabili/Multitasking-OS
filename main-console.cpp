@@ -442,9 +442,8 @@ void MainConsole::processSMI(){
     std::unordered_map<int, std::vector<size_t>> pidOffsets = this->memoryAllocator->getPidOffsets(); //running process in memory
     //get mem used 
     for (const auto& pidPair : pidOffsets){
-        size_t size = pidPair.second.size();
-        cout << "Size: " << size << endl; 
-        totalMemUsed += size; //let's not do num pairs * memproc since not all processes will be same mem?
+        size_t numFrames = pidPair.second.size();
+        totalMemUsed += numFrames * config.memoryPerFrame; //let's not do num pairs * memproc since not all processes will be same mem?
     }
     double totalMemUsedMiB = static_cast<double>(totalMemUsed);
     double maxMemMiB = static_cast<double>(maxMem);
@@ -473,7 +472,7 @@ void MainConsole::processSMI(){
         for (const auto& pCore : running) {
             int pid = pCore.first; 
             if (pidOffsets.count(pid) > 0) { //if running process in core is also found in running process in memory (ensure mutex on both ends)
-                cout << pCore.second << " " << pidOffsets[pid].size() << "MiB\n";
+                cout << pCore.second << " " << pidOffsets[pid].size() * config.memoryPerFrame << "MiB\n";
             } else{
                 cout << "Process in core is not in memory" << endl; 
             }

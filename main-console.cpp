@@ -300,7 +300,7 @@ void MainConsole::addProcesses() {
     int numProc = 0; 
     while (true) 
     {
-        if(this->shutdown || numProc >= 5) //remove in the future
+        if(this->shutdown || numProc >= 6) //remove in the future
         {
             this->runningScheduler->wait();
             this->runningScheduler->stop();
@@ -443,7 +443,8 @@ void MainConsole::processSMI(){
     //get mem used 
     for (const auto& pidPair : pidOffsets){
         size_t numFrames = pidPair.second.size();
-        totalMemUsed += numFrames * config.memoryPerFrame; //let's not do num pairs * memproc since not all processes will be same mem?
+        cout << "Process ID: " << pidPair.first << " has " << numFrames << " frames in memory.\n";
+        totalMemUsed += numFrames * config.memoryPerFrame; 
     }
     double totalMemUsedMiB = static_cast<double>(totalMemUsed);
     double maxMemMiB = static_cast<double>(maxMem);

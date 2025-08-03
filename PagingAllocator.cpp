@@ -176,6 +176,7 @@ void PagingAllocator::deallocate(int pid) {
     for (const auto& [frame, info] : pageMap) {
         if (info.first == pid) {
             toFree.push_back(frame); //mark frame for freeing
+            writeToBackingStore(pid, info.second); //write to backing store
         }
     }
 
@@ -187,7 +188,7 @@ void PagingAllocator::deallocate(int pid) {
 
     pidToPages.erase(pid); //remove page tracking from this process
 
-    
+
 }
 
 std::string PagingAllocator::visualizeMemory() const {

@@ -214,3 +214,7 @@ void PagingAllocator::snapshot(int quantum) const {
 std::unordered_map<int, std::vector<size_t>> PagingAllocator::getPidOffsets() const {
     return pidToPages;
 }
+
+ std::vector<size_t> PagingAllocator::getFreeFrameList() {
+    return freeFrameList; // Return a copy of the free frame list
+ }

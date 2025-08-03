@@ -17,6 +17,7 @@ public:
     void handlePageFault(int pid, size_t pageNumber);
     void snapshot(int quantum) const override;
     std::unordered_map<int, std::vector<size_t>> getPidOffsets() const override;
+    std::vector<size_t> getFreeFrameList() override; 
 
 private:
     size_t maxMemorySize;

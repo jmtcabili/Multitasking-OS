@@ -1,6 +1,7 @@
 #include "scheduler.h"
 #include <sstream>
 #include <iomanip>
+#include "config.h"
 
 
 Scheduler::Scheduler(int count, const std::string& schedulerType, int timeQuantum, int delayPerInstruction, IMemoryAllocator* allocator)
@@ -68,18 +69,23 @@ void Scheduler::coreWorker(int coreId)
             if (!processQueue.empty()) {
                 currentProcess = processQueue.front();
                 processQueue.pop();
-                cores[coreId] = currentProcess;
+                
 
                 // Allocate memory if needed
                 //check if all pages are already there?
                 if (currentProcess->getMemoryPtr() == nullptr) {
-                    void* mem = allocator->allocate(currentProcess);
+                    void* mem = nullptr;
+                    if (allocator->getFreeFrameList().size() == 0 && schedulerType == "fcfs"){
+                        break;
+                    }
+                    mem = allocator->allocate(currentProcess);
                     if (mem == nullptr) {
                         //std::cout << "Core " << coreId << " allocated memory for process: " << currentProcess->getPID() << std::endl;
                         processQueue.push(currentProcess);
                         cores[coreId] = nullptr;
                         continue;
                     } else {
+                        cores[coreId] = currentProcess;
                         currentProcess->setMemoryPtr(mem);
                     }
                 }

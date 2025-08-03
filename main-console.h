@@ -5,9 +5,9 @@
 #include "VMstat.h"
 #include "scheduler.h"
 #include "screen-console.h"
-#include "FlatMemoryAllocator.h"
 #include "PagingAllocator.h"
 #include <map>
+#include <thread>
 
 
 #ifndef MAIN_CONSOLE
@@ -17,7 +17,7 @@ class MainConsole : public IConsole{
 
     public: 
         MainConsole() = default; //no params needed for constructor
-        ~MainConsole() = default; //destructor
+        ~MainConsole(); //destructor
 
         void displayConsoleHeader(); //display default header
         void handleCommand() override; //override for main console command logic
@@ -45,7 +45,7 @@ class MainConsole : public IConsole{
         std::unique_ptr<VMstat> vmstat; 
         std::mutex schedulerMtx; 
         std::mutex IDMtx; 
-        int cpuTick = 0; 
+        int cpuTick = 0;
 
 };
 #endif

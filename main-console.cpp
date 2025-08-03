@@ -13,6 +13,21 @@
 
 using namespace std; 
 
+MainConsole::~MainConsole() {
+    // Set shutdown flag to stop any running threads
+    shutdown = true;
+    
+    // Stop scheduler if running
+    if (runningScheduler) {
+        runningScheduler->stop();
+        runningScheduler->wait();
+        runningScheduler.reset();
+    }
+    
+    // Clean up screen consoles (they're already managed by unique_ptr)
+    screenConsoles.clear();
+}
+
 bool isValidCommand(const std::string& cmd){
   
     if (cmd.empty()) {
@@ -285,7 +300,7 @@ void MainConsole::addProcesses() {
     int numProc = 0; 
     while (true) 
     {
-        if(this->shutdown || numProc >= 2) //remove in the future
+        if(this->shutdown || numProc >= 5) //remove in the future
         {
             this->runningScheduler->wait();
             this->runningScheduler->stop();
@@ -319,18 +334,18 @@ void MainConsole::addProcesses() {
             //write all pages but the first to the backing store
             //write PID, process name, command counter, num pages
         size_t numPages = newProcess->getNumPages();
-        std::ofstream out("csopesy-backing-store.txt", std::ios::app);
-        out << min << endl << max << endl << frameSize << endl << processMem << endl; 
-        out << numPages << endl; 
         std::unique_lock<std::mutex> lock(schedulerMtx); 
-        for (size_t currPage = 1; currPage < numPages; ++currPage){
+        std::ofstream out("csopesy-backing-store.txt", std::ios::app);
+       
+        for (size_t currPage = 0; currPage < numPages; ++currPage){
             //write to backing store
             int pid = newProcess->getPID();
             int cc = newProcess->getCommandCounter();
-            std::ofstream out("csopesy-backing-store.txt", std::ios::app);
-            out << pid << " " << currPage << " " << cc << endl; 
-            out.close();
+            //format: PID | Page # | cpu core assigned (-1 = not in ram/cpu)
+            out << pid << " " << currPage << " " << -1 << endl; 
+            
         }
+        out.close();
 
         if (this->runningScheduler){
             this->runningScheduler->addProcess(newProcess); 
@@ -412,6 +427,11 @@ void MainConsole::generateReport() {
 
 void MainConsole::processSMI(){
     //NOTE: only considers processes running in cores, not the ones made through screen -s / -c
+    if (!runningScheduler) {
+        std::cout << "Scheduler is not running. Please run 'scheduler-start' first.\n";
+        return;
+    }
+    
     int totalCores = config.numCores;
     int usedCores = runningScheduler->getUsedCores();
     int availableCores = totalCores - usedCores;

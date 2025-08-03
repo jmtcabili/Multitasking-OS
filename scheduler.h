@@ -1,9 +1,9 @@
 #pragma once
 #include "process.h"
-#include "FlatMemoryAllocator.h"
 #include <queue>
 #include <mutex>
 #include <thread>
+#include "PagingAllocator.h"
 #include <fstream>
 #include <vector>
 #include <chrono>

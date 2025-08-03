@@ -1,4 +1,5 @@
 #pragma once
+#include "process.h"
 #include "IMemoryAllocator.h"
 #include <vector>
 #include <unordered_map>
@@ -9,7 +10,7 @@ class PagingAllocator : public IMemoryAllocator {
 public:
     PagingAllocator(size_t maxMemorySize, size_t frameSize);
 
-    void* allocate(size_t bytes, int pid) override;
+    void* allocate(Process *process) override;
     void deallocate(int pid) override;
     std::string visualizeMemory() const override;
 
@@ -26,9 +27,10 @@ private:
     std::vector<size_t> freeFrameList;
     std::queue<size_t> fifoQueue; // for FIFO page replacement
     std::unordered_map<int, std::vector<size_t>> pidToPages; // pid -> list of page offsets
+    std::mutex allocatorMutex; // mutex for thread safety
 
     size_t allocateFrame(int pid, size_t pageNumber);
     void evictPage();
     void writeToBackingStore(int pid, size_t pageNumber);
-    void loadFromBackingStore(int pid, size_t pageNumber);
+    void loadFromBackingStore(int pid, size_t pageNumber, int coreNum);
 };

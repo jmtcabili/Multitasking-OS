@@ -20,7 +20,7 @@ Process::Process(int pid, std::string name, ScreenConsole* consolePtr)
 Process::Process(int pid, std::string name, ScreenConsole* consolePtr, size_t memoryRequired, size_t frameSize)
     : pid(pid), name(name), commandCounter(0), consolePtr(consolePtr), 
       state(READY), memoryRequired(memoryRequired), pageSize(frameSize),
-      numPages((memoryRequired+frameSize+1)/ frameSize)
+      numPages((memoryRequired+frameSize-1)/ frameSize)
 {}
 
 

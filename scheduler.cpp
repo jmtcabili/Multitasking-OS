@@ -71,8 +71,9 @@ void Scheduler::coreWorker(int coreId)
                 cores[coreId] = currentProcess;
 
                 // Allocate memory if needed
+                //check if all pages are already there?
                 if (currentProcess->getMemoryPtr() == nullptr) {
-                    void* mem = allocator->allocate(currentProcess->getMemoryRequired(), currentProcess->getPID());
+                    void* mem = allocator->allocate(currentProcess);
                     if (mem == nullptr) {
                         processQueue.push(currentProcess);
                         cores[coreId] = nullptr;

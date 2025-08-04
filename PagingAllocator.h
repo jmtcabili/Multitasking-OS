@@ -34,4 +34,7 @@ private:
     void evictPage();
     void writeToBackingStore(int pid, size_t pageNumber);
     void loadFromBackingStore(int pid, size_t pageNumber, int coreNum);
+
+    std::vector<uint8_t> physicalMemory;  // Physical memory block (byte-addressable)
+
 };

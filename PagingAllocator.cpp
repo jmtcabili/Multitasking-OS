@@ -8,11 +8,25 @@
 // initialize allocator with max memory size and frame size
 PagingAllocator::PagingAllocator(size_t maxMemorySize, size_t frameSize)
     : maxMemorySize(maxMemorySize), frameSize(frameSize) {
-    numFrames = maxMemorySize / frameSize; // calculate number of frames
+    
+    numFrames = maxMemorySize / frameSize;
+
     for (size_t i = 0; i < numFrames; ++i) {
-        freeFrameList.push_back(i); // initialize free frame list
+        freeFrameList.push_back(i);
     }
+
+    physicalMemory.resize(maxMemorySize, 0);  //Initialize all memory to 0
+
+    /* for printing initial memory contents
+     // Print physicalMemory contents to check initialization
+    std::cout << "Physical Memory contents after initialization:\n";
+    for (size_t i = 0; i < physicalMemory.size(); ++i) {
+        std::cout << (int)physicalMemory[i] << " ";
+        if ((i + 1) % 16 == 0) std::cout << "\n"; // print 16 bytes per line for readability
+    }
+    std::cout << std::endl;*/ 
 }
+
 
 void* PagingAllocator::allocate(Process *process) {
     
@@ -184,6 +198,12 @@ void PagingAllocator::deallocate(int pid) {
     for (size_t frame : toFree) {
         pageMap.erase(frame);
         freeFrameList.push_back(frame);
+
+        // Clear the physical memory for the frame
+        size_t startAddr = frame * frameSize;
+        for (size_t i = 0; i < frameSize; ++i) {
+            physicalMemory[startAddr + i] = 0;
+        }
     }
 
     pidToPages.erase(pid); //remove page tracking from this process

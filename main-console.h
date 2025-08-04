@@ -30,6 +30,7 @@ class MainConsole : public IConsole{
         void addProcesses(); //add processes to the scheduler
         void generateReport(); 
         void createScreen(std::string& processName); 
+        void createScreenWithInstructions(std::string& processName, std::string& processMemory, std::string& processInstructions);
         void loadScreen(std::string& processName);
         void listProcesses(); 
         void processSMI();
@@ -47,6 +48,5 @@ class MainConsole : public IConsole{
         std::mutex schedulerMtx; 
         std::mutex IDMtx; 
         int cpuTick = 0;
-
 };
 #endif

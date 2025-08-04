@@ -85,7 +85,8 @@ void MainConsole::handleCommand() { //handleCommand from MainConsole class
                     listProcesses();
                 }else if(option == "-c"){
                     if(checkScreenInput(option, processName, processMemory, processInstructions)){
-                        //TODO: Implement create screen with instructions
+                        createScreenWithInstructions(processName, processMemory, processInstructions);
+                        std::cout << "Screen " << processName << " created successfully with custom instructions.\n";
                     }
                 }
             }
@@ -195,6 +196,67 @@ void MainConsole::createScreen(std::string& processName){
     Idlock.unlock();
 
 }
+
+void MainConsole::createScreenWithInstructions(std::string& processName, std::string& processMemory, std::string& processInstructions) {
+    if (this->screenConsoles.count(processName) > 0) {
+        cout << "Process: " << processName << " already exists" << endl;
+        return;
+    }
+
+    int minIns = this->config.minInstructions;
+    int maxIns = this->config.maxInstructions;
+    int batch = this->config.batchFrequency;
+    
+    std::unique_lock<std::mutex> Idlock(this->IDMtx);
+    
+    // Parse memory size
+    size_t min = this->config.minMemProc;
+    size_t max = this->config.maxMemProc;
+    size_t frameSize = this->config.memoryPerFrame;
+    size_t processMem = std::stoi(processMemory);
+    
+    // Create screen console
+    ScreenConsole* screen = new ScreenConsole(this->processId, processName);
+    this->screenConsoles.insert(std::make_pair(processName, screen));
+    
+    // Create process with memory requirements
+    Process* newProcess = new Process(this->processId, processName, screen, processMem, frameSize);
+    
+    // Create commands from instructions
+    newProcess->createCommandsFromInstructions(processInstructions, minIns, maxIns);
+    
+    // Set process state and start
+    newProcess->setState(Process::READY);
+    newProcess->screenProcess(this->config.delay);
+    
+
+    size_t numPages = newProcess->getNumPages();
+    std::unique_lock<std::mutex> lock(schedulerMtx); 
+    std::ofstream out("csopesy-backing-store.txt", std::ios::app);
+    
+    for (size_t currPage = 0; currPage < numPages; ++currPage){
+        //write to backing store
+        int pid = newProcess->getPID();
+        int cc = newProcess->getCommandCounter();
+        //format: PID | Page # | cpu core assigned (-1 = not in ram/cpu)
+        out << pid << " " << currPage << " " << -1 << endl; 
+        
+    }
+    out.close();
+
+    if (this->runningScheduler)
+    {
+        this->runningScheduler->addProcess(newProcess); 
+        processId++;
+    } 
+    else 
+    {
+        delete newProcess; 
+    }
+    Idlock.unlock();
+    lock.unlock();
+}
+
 void MainConsole::loadScreen(std::string& processName){
     //check if screen exists
     if (this->screenConsoles.count(processName) == 0) {
@@ -291,14 +353,13 @@ void MainConsole::addProcesses() {
     int min = this->config.minInstructions;
     int max = this->config.maxInstructions;
     int batch = this->config.batchFrequency;
-    
-    int numProc = 0; 
+    int numProc = 0;
     while (true) 
     {
         if(this->shutdown || numProc >= 6) //remove in the future
         {
-            this->runningScheduler->wait();
-            this->runningScheduler->stop();
+            //this->runningScheduler->wait();
+            //this->runningScheduler->stop();
             break;
         }
 
@@ -527,9 +588,9 @@ bool MainConsole::checkScreenInput(std::string& option, std::string& processName
         }
 
         // Memory bounds check
-        if (mem < 64 || mem > 65536 || (mem & (mem - 1)) != 0)
+        if (mem < config.minMemProc || mem > config.maxMemProc || (mem & (mem - 1)) != 0)
         {
-            std::cout << "Memory size must be a power of 2 between 64 and 65536 bytes.\n";
+            std::cout << "Memory size must be a power of 2 between minimum and maximum memory limitations.\n";
             return false;
         }
 
@@ -550,12 +611,47 @@ bool MainConsole::checkScreenInput(std::string& option, std::string& processName
             int count = 0;
             while (std::getline(ss, command, ';'))
             {
-                if (!command.empty()) ++count;
+                if (!command.empty()) {
+                    ++count;
+                    
+                    // Trim whitespace from command
+                    command.erase(0, command.find_first_not_of(" \t"));
+                    command.erase(command.find_last_not_of(" \t") + 1);
+                    
+                    bool validCommand = false;
+                    
+                    if (command.find("print") == 0) {
+                        validCommand = true;
+                    }
+                    else if (command.find("declare") == 0) {
+                        validCommand = true;
+                    }
+                    else if (command.find("add") == 0) {
+                        validCommand = true;
+                    }
+                    else if (command.find("subtract") == 0) {
+                        validCommand = true;
+                    }
+                    else if (command.find("sleep") == 0) {
+                        validCommand = false;
+                    }
+                    else if (command.find("read") == 0) {
+                        validCommand = false;
+                    }
+                    else if (command.find("write") == 0) {
+                        validCommand = false;
+                    }
+                    
+                    if (!validCommand) {
+                        std::cout << "invalid command\n";
+                        return false;
+                    }
+                }
             }
 
             if (count < 1 || count > 50)
             {
-                std::cout << "invalid amounts of commands\n";
+                std::cout << "invalid command\n";
                 return false;
             }
         }

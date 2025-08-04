@@ -1,6 +1,9 @@
 #include "PagingAllocator.h"
+#include "backingStore.h"
 #include <fstream>
 #include <iostream>
+#include <sstream>
+
 
 // initialize allocator with max memory size and frame size
 PagingAllocator::PagingAllocator(size_t maxMemorySize, size_t frameSize)
@@ -11,15 +14,18 @@ PagingAllocator::PagingAllocator(size_t maxMemorySize, size_t frameSize)
     }
 }
 
-void* PagingAllocator::allocate(size_t bytes, int pid) {
-    size_t pagesNeeded = (bytes + frameSize - 1) / frameSize; //get nearest page 
+void* PagingAllocator::allocate(Process *process) {
+    
+    size_t pagesNeeded = process->getNumPages(); //pages needed ni process to run 
+    //Process already instatiated with num pages it needs 
 
+    int pid = process->getPID(); //get process id
     for (size_t pageNum = 0; pageNum < pagesNeeded; ++pageNum) {
-        handlePageFault(pid, pageNum); // demand paging
+         handlePageFault(pid, pageNum); // demand paging
     }
 
     pidToPages[pid].resize(pagesNeeded); //track numpages allocated to pid
-    return reinterpret_cast<void*>(pid); // simulate pointer
+    return reinterpret_cast<void*>(process->getPID()+1); // simulate pointer
 }
 
 void PagingAllocator::handlePageFault(int pid, size_t pageNumber) {
@@ -36,7 +42,7 @@ void PagingAllocator::handlePageFault(int pid, size_t pageNumber) {
 
     //allocate new frame and simulate loading from backing store
     size_t frame = allocateFrame(pid, pageNumber);
-    loadFromBackingStore(pid, pageNumber); //from backing store 
+    loadFromBackingStore(pid, pageNumber, -2); //from backing store //TO DO: Sample lang yung -2
     pageMap[frame] = {pid, pageNumber}; //track mapping
     fifoQueue.push(frame); //add to FIFO queue for replacement
 }
@@ -64,16 +70,102 @@ void PagingAllocator::evictPage() {
 
 //TODO: proper format?
 void PagingAllocator::writeToBackingStore(int pid, size_t pageNumber) {
-    std::ofstream out("csopesy-backing-store.txt", std::ios::app);
-    out << "PID " << pid << " PAGE " << pageNumber << " => SWAPPED OUT\n";
-    out.close();
+
+    //format: PID | Page # | command counter | cpu core assigned (-1 = not in ram/cpu)
+    std::lock_guard <std::mutex> lock(backingStoreMutex); //lock for thread safety
+    std::ifstream backingFile("csopesy-backing-store.txt");
+    std::vector<std::string> lines; //store backingstore information 
+
+    std::string pageLine; 
+    int linePid; 
+    size_t linePageNum;
+    int lineCore;
+    
+    try{
+        if (backingFile.is_open()) {
+            while (std::getline(backingFile, pageLine)){
+                lines.push_back(pageLine); //store each line to mem
+            }
+            backingFile.close(); //close file after reading
+        }
+        //locate line of interested page
+        bool found = false; 
+        for (int i = 0; i < lines.size(); i++){
+            std::istringstream iss(lines[i]);
+            if (iss >> linePid >> linePageNum >> lineCore) { //read PID, page number, and core
+                if (linePid == pid && linePageNum == pageNumber) {
+                    found = true; //found the page to update
+                    lines[i] = std::to_string(linePid) + " " + std::to_string(linePageNum) + " -1"; //update core status
+                    break; 
+                }
+            }
+        }
+
+        //overwrite backing store with updated lines
+        if (found) {
+            std::ofstream out("csopesy-backing-store.txt", std::ios::trunc); //overwrite
+            for (const auto& line : lines) {
+                out << line << "\n"; //write each line back
+            }
+            out.close(); //close file after writing
+        } else {
+            std::cerr << "Page not found in backing store: PID " << pid << ", Page " << pageNumber << std::endl;
+        }
+    }catch(const std::exception& error){
+        std::cerr << "Error reading backing file: " << error.what() << std::endl;
+        return; 
+    }
 }
 
 
-void PagingAllocator::loadFromBackingStore(int pid, size_t pageNumber) {
-    std::ofstream out("csopesy-backing-store.txt", std::ios::app);
-    out << "PID " << pid << " PAGE " << pageNumber << " <= LOADED\n";
-    out.close();
+void PagingAllocator::loadFromBackingStore(int pid, size_t pageNumber, int coreNum) {
+    //format: PID | Page # | command counter | cpu core assigned (-1 = not in ram/cpu)
+    //can refactor to just have one function for updating backing store? 
+    //just include cpu core to be assigned with in bs + option if write / load
+    
+    std::lock_guard <std::mutex> lock(backingStoreMutex); //lock for thread safety
+    std::ifstream backingFile("csopesy-backing-store.txt");
+    std::vector<std::string> lines; //store backingstore information 
+
+    std::string pageLine; 
+    int linePid; 
+    size_t linePageNum;
+    int lineCore;
+    
+    try{
+        if (backingFile.is_open()) {
+            while (std::getline(backingFile, pageLine)){
+                lines.push_back(pageLine); //store each line to mem
+            }
+            backingFile.close(); //close file after reading
+        }
+        //locate line of interested page
+        bool found = false; 
+        for (int i = 0; i < lines.size(); i++){
+            std::istringstream iss(lines[i]);
+            if (iss >> linePid >> linePageNum >> lineCore) { //read PID, page number, and core
+                if (linePid == pid && linePageNum == pageNumber) {
+                    found = true; //found the page to update
+                    lines[i] = std::to_string(linePid) + " " + std::to_string(linePageNum) + " " + std::to_string(coreNum); //update core status
+                    break; 
+                }
+            }
+        }
+
+        //overwrite backing store with updated lines
+        if (found) {
+            std::ofstream out("csopesy-backing-store.txt", std::ios::trunc); //overwrite
+            for (const auto& line : lines) {
+                out << line << "\n"; //write each line back
+            }
+            out.close(); //close file after writing
+        } else {
+            std::cerr << "Page not found in backing store: PID " << pid << ", Page " << pageNumber << std::endl;
+        }
+    }catch(const std::exception& error){
+        std::cerr << "Error reading backing file: " << error.what() << std::endl;
+        return; 
+    }
 }
 
 
@@ -84,6 +176,7 @@ void PagingAllocator::deallocate(int pid) {
     for (const auto& [frame, info] : pageMap) {
         if (info.first == pid) {
             toFree.push_back(frame); //mark frame for freeing
+            writeToBackingStore(pid, info.second); //write to backing store
         }
     }
 
@@ -94,6 +187,8 @@ void PagingAllocator::deallocate(int pid) {
     }
 
     pidToPages.erase(pid); //remove page tracking from this process
+
+
 }
 
 std::string PagingAllocator::visualizeMemory() const {
@@ -112,10 +207,14 @@ std::string PagingAllocator::visualizeMemory() const {
 }
 
 //TODO:
-/*void PagingAllocator::snapshot(const std::string& filename) const {
+void PagingAllocator::snapshot(int quantum) const {
  
-}*/
+}
 
 std::unordered_map<int, std::vector<size_t>> PagingAllocator::getPidOffsets() const {
     return pidToPages;
 }
+
+ std::vector<size_t> PagingAllocator::getFreeFrameList() {
+    return freeFrameList; // Return a copy of the free frame list
+ }

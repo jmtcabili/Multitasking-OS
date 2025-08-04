@@ -18,7 +18,7 @@ public:
     };
 
     Process(int pid, std::string name, ScreenConsole* consolePtr);
-    Process(int pid, std::string name, ScreenConsole* consolePtr, size_t memoryRequired);
+    Process(int pid, std::string name, ScreenConsole* consolePtr, size_t memoryRequired, size_t frameSize);
 
     
     void addCommand(ICommand::CommandType commandType);
@@ -34,6 +34,8 @@ public:
     int getLinesOfCode() const;
     int getPID() const;
     int getCPUCoreID() const;
+    
+    size_t getNumPages(); 
 
     ProcessState getState() const;
     std::string getName() const;
@@ -61,8 +63,12 @@ private:
     int cpuCoreID = -1;
     std::string timeFinished;
     ProcessState state;
+
     //memory management
-    size_t memoryRequired;      
-    void* memoryPtr = nullptr;  // Pointer to the allocated memory 
+    size_t memoryRequired;
+    void* memoryPtr = nullptr;  // Pointer to the allocated memory
+    size_t pageSize; 
+    size_t numPages; 
+
 
 };

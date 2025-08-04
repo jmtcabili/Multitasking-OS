@@ -1,2 +1,4 @@
 #include "globals.h"
+#include "backingStore.h"
 std::unordered_map<int, std::unordered_map<std::string, uint16_t>> processVariables; //not sure if this and the header is necessary
+std::mutex backingStoreMutex;

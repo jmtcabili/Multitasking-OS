@@ -3,7 +3,6 @@
 #include <string>
 #include <sstream>
 #include "main-console.h"
-#include "VMstat.h"
 
 #ifdef _WIN32
     #define CLEAR_COMMAND "cls"
@@ -12,6 +11,21 @@
 #endif
 
 using namespace std; 
+
+MainConsole::~MainConsole() {
+    // Set shutdown flag to stop any running threads
+    shutdown = true;
+    
+    // Stop scheduler if running
+    if (runningScheduler) {
+        runningScheduler->stop();
+        runningScheduler->wait();
+        runningScheduler.reset();
+    }
+    
+    // Clean up screen consoles (they're already managed by unique_ptr)
+    screenConsoles.clear();
+}
 
 bool isValidCommand(const std::string& cmd){
   
@@ -53,38 +67,34 @@ void MainConsole::handleCommand() { //handleCommand from MainConsole class
         } else{
             if (input.find("screen") == 0){//like hw3
                 stringstream screenCmd(input);
-                string command, option, processName;
-                screenCmd >> command >> option >> processName;
+                string command, option, processName, processMemory, processInstructions;
+                screenCmd >> command >> option >> processName >> processMemory >> processInstructions;
                 if (option == "-s"){
-                    if (processName.empty()){
-                        std::cout << "Please provide a process name. (screen -s <process_name>)\n";
-                    } else{
-                        //TODO: also check if already exists
+                    if(checkScreenInput(option, processName, processMemory, processInstructions)){
                         createScreen(processName);
                         std::cout << "Screen " << processName << " created successfully.\n";
                     }
-                }else if (option == "-r"){
-                    if (processName.empty()){
-                        std::cout << "Please provide a process name. (screen -s <process_name>)\n";
-                    } if (this->screenConsoles.count(processName) == 0) {
-                        std::cout << "Screen " << processName << " does not exist.\n";
-                    } else {
+                }
+                else if (option == "-r")
+                {
+                    if(checkScreenInput(option, processName, processMemory, processInstructions)){
                         system(CLEAR_COMMAND);
                         loadScreen(processName); // Load the screen for the process
                     }
                 }else if (option == "-ls"){
                     listProcesses();
-                }else{
-                    std::cout << "Invalid screen command. Use screen -s <process_name>, screen -r <process_name>, or screen -ls\n";
+                }else if(option == "-c"){
+                    if(checkScreenInput(option, processName, processMemory, processInstructions)){
+                        //TODO: Implement create screen with instructions
+                    }
                 }
-            }else if(input == "scheduler-start"){startScheduler();} //start the scheduler
+            }
+            else if(input == "scheduler-start"){startScheduler();} //start the scheduler
             else if(input == "scheduler-stop"){stopScheduler();} //stop the scheduler
             else if(input == "report-util"){generateReport();} //generate report
             else if(input == "process-smi"){processSMI();}
         }
     }
-   
-
 }
 
 void MainConsole::initialize(){
@@ -126,8 +136,11 @@ void MainConsole::initialize(){
                     else if (param == "mem-per-frame"){
                         this->config.memoryPerFrame = std::stoi(value);
                     }
-                    else if (param == "mem-per-proc"){
-                        this->config.memoryPerProc = std::stoi(value);
+                    else if (param == "min-mem-per-proc"){
+                        this->config.minMemProc = std::stoi(value);
+                    }
+                    else if (param == "max-mem-per-proc"){
+                        this->config.maxMemProc= std::stoi(value);
                     }
                 }
             }
@@ -145,12 +158,11 @@ void MainConsole::initialize(){
         std::cout << "Maximum Instructions: " << this->config.maxInstructions << std::endl;
         std::cout << "Maximum Memory: " << this->config.maxMemory << std::endl;
         std::cout << "Maxmimum Frame:  " << this->config.memoryPerFrame << std::endl;
-        std::cout << "Memory per Proc: " << this->config.memoryPerProc << std::endl;
+        std::cout << "Min mem per Proc: " << this->config.minMemProc << std::endl;
+        std::cout << "Max mem per Proc: " << this->config.maxMemProc << std::endl;
 
-        this->vmstat = std::make_unique<VMstat>(); // Initialize vmstat object
-        this->memoryAllocator = std::make_unique<FlatMemoryAllocator>(
+        this->memoryAllocator = std::make_unique<PagingAllocator>(
             this->config.maxMemory,
-            this->config.memoryPerProc,
             this->config.memoryPerFrame
         );
     }catch(const std::exception& error){
@@ -283,7 +295,7 @@ void MainConsole::addProcesses() {
     int numProc = 0; 
     while (true) 
     {
-        if(this->shutdown || numProc >= 2) //remove in the future
+        if(this->shutdown || numProc >= 6) //remove in the future
         {
             this->runningScheduler->wait();
             this->runningScheduler->stop();
@@ -293,7 +305,7 @@ void MainConsole::addProcesses() {
         if (cpuTick % batch != 0) 
         {
             cpuTick++;
-            std::this_thread::sleep_for(std::chrono::milliseconds(50)); 
+            std::this_thread::sleep_for(std::chrono::milliseconds(500)); 
             continue;
         }
 
@@ -303,14 +315,36 @@ void MainConsole::addProcesses() {
         ScreenConsole* screen = new ScreenConsole(this->processId, processName);  
         this->screenConsoles.insert(std::make_pair(processName, screen));  
 
-        Process* newProcess = new Process(this->processId, processName, screen, this->config.memoryPerProc);
+
+        //generate process with random memory
+        size_t min = this->config.minMemProc;
+        size_t max = this->config.maxMemProc;
+        size_t frameSize = this->config.memoryPerFrame;
+        size_t processMem = min + rand() % (max - min + 1);
+        
+        Process* newProcess = new Process(this->processId, processName, screen, processMem, frameSize);
         newProcess->test_generateRandomCommands(min, max); 
         newProcess->setState(Process::READY); 
-
+        //before process is added, write process details to backing store first
+            //write all pages but the first to the backing store
+            //write PID, process name, command counter, num pages
+        size_t numPages = newProcess->getNumPages();
         std::unique_lock<std::mutex> lock(schedulerMtx); 
+        std::ofstream out("csopesy-backing-store.txt", std::ios::app);
+       
+        for (size_t currPage = 0; currPage < numPages; ++currPage){
+            //write to backing store
+            int pid = newProcess->getPID();
+            int cc = newProcess->getCommandCounter();
+            //format: PID | Page # | cpu core assigned (-1 = not in ram/cpu)
+            out << pid << " " << currPage << " " << -1 << endl; 
+            
+        }
+        out.close();
+
         if (this->runningScheduler){
             this->runningScheduler->addProcess(newProcess); 
-             numProc++;
+            numProc++;
         } 
         else 
         {
@@ -388,6 +422,11 @@ void MainConsole::generateReport() {
 
 void MainConsole::processSMI(){
     //NOTE: only considers processes running in cores, not the ones made through screen -s / -c
+    if (!runningScheduler) {
+        std::cout << "Scheduler is not running. Please run 'scheduler-start' first.\n";
+        return;
+    }
+    
     int totalCores = config.numCores;
     int usedCores = runningScheduler->getUsedCores();
     int availableCores = totalCores - usedCores;
@@ -398,9 +437,9 @@ void MainConsole::processSMI(){
     std::unordered_map<int, std::vector<size_t>> pidOffsets = this->memoryAllocator->getPidOffsets(); //running process in memory
     //get mem used 
     for (const auto& pidPair : pidOffsets){
-        size_t size = pidPair.second.size();
-        cout << "Size: " << size << endl; 
-        totalMemUsed += size; //let's not do num pairs * memproc since not all processes will be same mem?
+        size_t numFrames = pidPair.second.size();
+        cout << "Process ID: " << pidPair.first << " has " << numFrames << " frames in memory.\n";
+        totalMemUsed += numFrames * config.memoryPerFrame; 
     }
     double totalMemUsedMiB = static_cast<double>(totalMemUsed);
     double maxMemMiB = static_cast<double>(maxMem);
@@ -429,7 +468,7 @@ void MainConsole::processSMI(){
         for (const auto& pCore : running) {
             int pid = pCore.first; 
             if (pidOffsets.count(pid) > 0) { //if running process in core is also found in running process in memory (ensure mutex on both ends)
-                cout << pCore.second << " " << pidOffsets[pid].size() << "MiB\n";
+                cout << pCore.second << " " << pidOffsets[pid].size() * config.memoryPerFrame << "MiB\n";
             } else{
                 cout << "Process in core is not in memory" << endl; 
             }
@@ -438,3 +477,92 @@ void MainConsole::processSMI(){
     cout << "\n\n";
 }
 
+bool MainConsole::checkScreenInput(string option, string processName, string processMemory, string processInstructions)
+{
+    if(option.empty())
+    {
+        std::cout << "Please provide a valid screen option\n";
+        return false;
+    }
+
+    else if (option == "-r")
+    {
+        if (processName.empty())
+        {
+            std::cout << "Please provide a process name. (screen -r <process_name>)\n";
+            return false;
+        }
+        else if (this->screenConsoles.count(processName) == 0) 
+        {
+            std::cout << "Screen " << processName << " does not exist.\n";
+        }
+        return true;
+    }
+
+    // Common for -s and -c
+    bool isScreenCreate = (option == "-s" || option == "-c");
+    if (isScreenCreate)
+    {
+        // Check for duplicates
+        if (this->screenConsoles.count(processName) > 0)
+        {
+            std::cout << "Screen " << processName << " already exists. Use screen -r <process_name> to load it.\n";
+            return false;
+        }
+
+        // Empty field checks
+        else if (processName.empty() || processMemory.empty())
+        {
+            std::cout << "Please provide a process name and memory size. (screen " << option << " <process_name> <memory_size>)\n";
+            return false;
+        }
+
+        // Check if memory is numeric and valid
+        int mem = 0;
+        try {
+            mem = std::stoi(processMemory);
+        } catch (...) {
+            std::cout << "Memory size must be a valid number.\n";
+            return false;
+        }
+
+        // Memory bounds check
+        if (mem < 64 || mem > 65536 || (mem & (mem - 1)) != 0)
+        {
+            std::cout << "Memory size must be a power of 2 between 64 and 65536 bytes.\n";
+            return false;
+        }
+
+        // If -c, also check instructions
+        else if (option == "-c")
+        {
+            if (processInstructions.empty())
+            {
+                std::cout << "Please provide quoted semicolon-separated instructions. (screen -c <name> <mem> \"<instructions>\")\n";
+                return false;
+            }
+
+            // Remove quotation marks
+            processInstructions.erase(std::remove(processInstructions.begin(), processInstructions.end(), '"'), processInstructions.end());
+
+            std::stringstream ss(processInstructions);
+            std::string command;
+            int count = 0;
+            while (std::getline(ss, command, ';'))
+            {
+                if (!command.empty()) ++count;
+            }
+
+            if (count < 1 || count > 50)
+            {
+                std::cout << "invalid amounts of commands\n";
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    std::cout << "Invalid screen command. Use -s, -r, or -c.\n";
+    return false;
+}

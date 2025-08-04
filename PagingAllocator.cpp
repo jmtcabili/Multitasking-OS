@@ -218,3 +218,7 @@ std::unordered_map<int, std::vector<size_t>> PagingAllocator::getPidOffsets() co
  std::vector<size_t> PagingAllocator::getFreeFrameList() {
     return freeFrameList; // Return a copy of the free frame list
  }
+
+std::unordered_map<size_t, std::pair<int, size_t>> PagingAllocator::getPageMap() {
+    return pageMap; // Return a copy of the page map
+}

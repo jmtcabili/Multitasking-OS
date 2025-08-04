@@ -436,10 +436,10 @@ void MainConsole::processSMI(){
 
     std::unordered_map<int, std::vector<size_t>> pidOffsets = this->memoryAllocator->getPidOffsets(); //running process in memory
     //get mem used 
-    for (const auto& pidPair : pidOffsets){
-        size_t numFrames = pidPair.second.size();
-        cout << "Process ID: " << pidPair.first << " has " << numFrames << " frames in memory.\n";
-        totalMemUsed += numFrames * config.memoryPerFrame; 
+    std::unordered_map<size_t, std::pair<int, size_t>> pageMap = this->memoryAllocator->getPageMap(); //get all frames
+
+    for (const auto& frame : pageMap){
+        totalMemUsed += config.memoryPerFrame; 
     }
     double totalMemUsedMiB = static_cast<double>(totalMemUsed);
     double maxMemMiB = static_cast<double>(maxMem);

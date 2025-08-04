@@ -477,7 +477,7 @@ void MainConsole::processSMI(){
     cout << "\n\n";
 }
 
-bool MainConsole::checkScreenInput(string option, string processName, string processMemory, string processInstructions)
+bool MainConsole::checkScreenInput(std::string& option, std::string& processName, std::string& processMemory, std::string& processInstructions)
 {
     if(option.empty())
     {

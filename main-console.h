@@ -33,7 +33,7 @@ class MainConsole : public IConsole{
         void loadScreen(std::string& processName);
         void listProcesses(); 
         void processSMI();
-        bool checkScreenInput(string option, string processName, string processMemory, string processInstructions);
+        bool checkScreenInput(std::string& option, std::string& processName, std::string& processMemory, std::string& processInstructions);
         
     private: 
         bool shutdown = false;

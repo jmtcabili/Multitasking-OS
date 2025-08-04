@@ -199,7 +199,7 @@ void PagingAllocator::deallocate(int pid) {
         pageMap.erase(frame);
         freeFrameList.push_back(frame);
 
-        // Clear the physical memory for the frame
+        // Clear the physical memory for the frame 
         size_t startAddr = frame * frameSize;
         for (size_t i = 0; i < frameSize; ++i) {
             physicalMemory[startAddr + i] = 0;

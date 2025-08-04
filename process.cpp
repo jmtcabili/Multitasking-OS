@@ -253,4 +253,91 @@ void* Process::getMemoryPtr() const {
     return memoryPtr;
 }
 
+//symbol table management
 
+// Declare a new variable in the symbol table
+bool Process::declareVariable(const std::string& name, uint16_t value) {
+    if (variableOffsets.find(name) != variableOffsets.end()) {
+        return false; // Already declared
+    }
+
+    size_t usedBytes = variableOffsets.size() * sizeof(uint16_t);
+    if (usedBytes + sizeof(uint16_t) > SYMBOL_TABLE_SIZE) {
+        return false; // No more space
+    }
+
+    size_t offset = usedBytes;
+    variableOffsets[name] = offset;
+
+    symbolTableMemory[offset] = value & 0xFF;             // low byte
+    symbolTableMemory[offset + 1] = (value >> 8) & 0xFF;  // high byte
+
+    return true;
+}
+
+// Set the value of an existing variable
+bool Process::setVariable(const std::string& name, uint16_t value) {
+    auto it = variableOffsets.find(name);
+    if (it == variableOffsets.end()) return false;
+
+    size_t offset = it->second;
+    symbolTableMemory[offset] = value & 0xFF;
+    symbolTableMemory[offset + 1] = (value >> 8) & 0xFF;
+
+    return true;
+}
+
+// Get the value of a variable
+bool Process::getVariable(const std::string& name, uint16_t& outValue) const {
+    auto it = variableOffsets.find(name);
+    
+    // Check if the variable was found.
+    if (it == variableOffsets.end()) {
+        // Variable not found, return false to signal failure.
+        // We do not modify outValue here.
+        return false;
+    }
+
+    // Variable was found. Now, get the value.
+    size_t offset = it->second;
+    // Assuming a little-endian system where the least significant byte is first.
+    uint16_t value = symbolTableMemory[offset] | (symbolTableMemory[offset + 1] << 8);
+
+    // Assign the found value to the output parameter.
+    outValue = value;
+    
+    // Return true to signal success.
+    return true;
+}
+
+// Print the entire symbol table for debugging
+void Process::printSymbolTable() const {
+    // Gather all variables into a vector for sorting
+    std::vector<std::pair<std::string, size_t>> vars(variableOffsets.begin(), variableOffsets.end());
+
+    // Sort by variable name alphabetically
+    std::sort(vars.begin(), vars.end(), [](const auto& a, const auto& b) {
+        return a.first < b.first;
+    });
+
+    std::cout << "Symbol Table for PID " << pid << ":\n";
+    std::cout << std::left << std::setw(12) << "Name"
+              << std::setw(10) << "Value"
+              << std::setw(10) << "Offset" << "\n";
+    std::cout << std::string(32, '-') << "\n";
+
+    for (const auto& [name, offset] : vars) {
+        // Read the 2-byte value at the offset (little endian)
+        uint16_t value = symbolTableMemory[offset] | (symbolTableMemory[offset + 1] << 8);
+        std::cout << std::left << std::setw(12) << name
+                  << std::setw(10) << value
+                  << std::setw(10) << offset << "\n";
+    }
+}
+
+
+// Clear the symbol table when deallocating?
+void Process::clearSymbolTable() {
+    std::fill(symbolTableMemory.begin(), symbolTableMemory.end(), 0);
+    variableOffsets.clear();
+}

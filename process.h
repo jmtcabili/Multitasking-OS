@@ -53,6 +53,15 @@ public:
     void setMemoryPtr(void* ptr);
     void* getMemoryPtr() const;
 
+    //symbol table management
+    bool declareVariable(const std::string& name, uint16_t value);
+    bool setVariable(const std::string& name, uint16_t value);
+    bool getVariable(const std::string& name, uint16_t& outValue) const;
+
+    void printSymbolTable() const;
+
+    void clearSymbolTable();
+
 private: 
     int pid;
     std::string name;
@@ -69,6 +78,13 @@ private:
     void* memoryPtr = nullptr;  // Pointer to the allocated memory
     size_t pageSize; 
     size_t numPages; 
+
+    //symboll table 
+    // Fixed 64-byte memory block for symbol table
+    static constexpr size_t SYMBOL_TABLE_SIZE = 64;  // 64 bytes = 32 variables (2 bytes each)
+    std::array<uint8_t, SYMBOL_TABLE_SIZE> symbolTableMemory{}; // raw memory block
+    std::unordered_map<std::string, size_t> variableOffsets;    // variable name -> byte offset
+
 
 
 };

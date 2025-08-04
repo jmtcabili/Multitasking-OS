@@ -168,7 +168,70 @@ void Process::generateTestCaseAlternatingCommands(int count) {
     }
 }
 
+void Process::createCommandsFromInstructions(const std::string& instructions, int min, int max) {
+    std::stringstream ss(instructions);
+    std::string instruction;
+    static std::mt19937 rng(std::random_device{}());
+    static std::uniform_int_distribution<int> dist(0, 5); // for the various commands
+    static std::uniform_int_distribution<int> val(0, 255);
+    static std::uniform_int_distribution<int> sleepTicks(1, 10);
 
+    while (std::getline(ss, instruction, ';')) {
+
+        // Trim whitespace
+        int i = 0;
+        instruction.erase(0, instruction.find_first_not_of(" \t"));
+        instruction.erase(instruction.find_last_not_of(" \t") + 1);
+        
+        if (instruction.empty()) continue;
+        
+        // Parse instruction and create command
+        if (instruction.find("print") == 0) 
+        {
+            CommandList.push_back(std::make_shared<PrintCommand>(pid, "Hello world from " + name + "!"));
+        }
+        else if (instruction.find("declare") == 0) 
+        {
+            std::string var = "var" + std::to_string(i);
+            CommandList.push_back(std::make_shared<DeclareCommand>(pid, var, val(rng)));
+            i++;
+        }
+        else if (instruction.find("add") == 0) 
+        {
+            CommandList.push_back(AddCommand::generateRandom(pid));
+        }
+        else if (instruction.find("subtract") == 0) 
+        {
+            CommandList.push_back(SubtractCommand::generateRandom(pid));
+        }
+        else if (instruction.find("sleep") == 0) 
+        {
+            int ticks = sleepTicks(rng);
+            CommandList.push_back(std::make_shared<SleepCommand>(pid, ticks));
+        }
+        else if (instruction.find("for") == 0) 
+        {
+            std::string bodyInstructions = instruction.substr(3);
+            std::vector<std::shared_ptr<ICommand>> loopBody = generateLoopBody(pid, 1, 3, rng); // max depth 3
+            int loopCount = std::uniform_int_distribution<int>(1, 5)(rng);
+            CommandList.push_back(std::make_shared<ForCommand>(pid, loopBody, loopCount));
+        }
+        else if (instruction.find("read") == 0) 
+        {
+            //TODO: Implement read command
+            continue;
+        }
+        else if (instruction.find("write") == 0) 
+        {
+            //TODO: Implement write command
+            continue;
+        }
+        else 
+        {
+            std::cout << "Invalid command in instructions: " << instruction << "\n";
+        }
+    }
+}
 
 void Process::test_generateRandomCommands(int min, int max) {
     static std::mt19937 rng(std::random_device{}());

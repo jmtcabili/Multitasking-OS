@@ -18,6 +18,8 @@ public:
     void snapshot(int quantum) const override;
     std::unordered_map<int, std::vector<size_t>> getPidOffsets() const override;
     std::vector<size_t> getFreeFrameList() override; 
+    bool readFromMemory(size_t addr, uint16_t& outValue) const;
+    bool writeToMemory(size_t addr, uint16_t value);
 
 private:
     size_t maxMemorySize;

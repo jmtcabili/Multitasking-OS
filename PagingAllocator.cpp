@@ -226,6 +226,25 @@ std::string PagingAllocator::visualizeMemory() const {
     return output;
 }
 
+bool PagingAllocator::readFromMemory(size_t addr, uint16_t& outValue) const {
+    if (addr + 1 >= physicalMemory.size()) return false;
+
+    // Read two bytes and assemble into uint16_t (little-endian)
+    outValue = static_cast<uint16_t>(physicalMemory[addr]) |
+               (static_cast<uint16_t>(physicalMemory[addr + 1]) << 8);
+    return true;
+}
+
+bool PagingAllocator::writeToMemory(size_t addr, uint16_t value) {
+    if (addr + 1 >= physicalMemory.size()) return false;
+
+    // Write lower and higher byte (little-endian)
+    physicalMemory[addr] = static_cast<uint8_t>(value & 0xFF);
+    physicalMemory[addr + 1] = static_cast<uint8_t>((value >> 8) & 0xFF);
+    return true;
+}
+
+
 //TODO:
 void PagingAllocator::snapshot(int quantum) const {
  

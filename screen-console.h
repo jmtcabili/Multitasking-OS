@@ -17,7 +17,7 @@ class ScreenConsole : public IConsole{
 
         //command functions 
         void processSMI();
-        void addLog(const std::string& log) {
+        virtual void addLog(const std::string& log) {
             logs.push_back(log);
         }
         void exit(); 

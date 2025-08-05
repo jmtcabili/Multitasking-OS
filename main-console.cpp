@@ -403,7 +403,7 @@ void MainConsole::addProcesses() {
     int numProc = 0;
     while (true) 
     {
-        if(this->shutdown || numProc >= 20) //remove in the future
+        if(this->shutdown) //remove in the future
         {
             //this->runningScheduler->wait();
             //this->runningScheduler->stop();
@@ -424,10 +424,10 @@ void MainConsole::addProcesses() {
 
 
         //generate process with random memory
-        size_t min = this->config.minMemProc;
-        size_t max = this->config.maxMemProc;
+        size_t minMem = this->config.minMemProc;
+        size_t maxMem = this->config.maxMemProc;
         size_t frameSize = this->config.memoryPerFrame;
-        size_t processMem = min + rand() % (max - min + 1);
+        size_t processMem = minMem + rand() % (maxMem - minMem + 1);
 
         
         Process* newProcess = new Process(this->processId, processName, screen, processMem, frameSize);

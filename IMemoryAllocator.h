@@ -2,6 +2,8 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include "process.h"
+
 
 enum class AllocationStrategy { //for mo2 future proofing
     FirstFit

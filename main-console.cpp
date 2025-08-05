@@ -68,7 +68,10 @@ void MainConsole::handleCommand() { //handleCommand from MainConsole class
             if (input.find("screen") == 0){//like hw3
                 stringstream screenCmd(input);
                 string command, option, processName, processMemory, processInstructions;
-                screenCmd >> command >> option >> processName >> processMemory >> processInstructions;
+                screenCmd >> command >> option >> processName >> processMemory;
+                getline(screenCmd, processInstructions);
+                processInstructions.erase(0, processInstructions.find_first_not_of(" \t"));
+                processInstructions.erase(processInstructions.find_last_not_of(" \t") + 1);
                 if (option == "-s"){
                     if(checkScreenInput(option, processName, processMemory, processInstructions)){
                         createScreen(processName);
@@ -657,58 +660,101 @@ bool MainConsole::checkScreenInput(std::string& option, std::string& processName
         // If -c, also check instructions
         else if (option == "-c")
         {
-            if (processInstructions.empty())
+            if (processInstructions.empty()) 
             {
                 std::cout << "Please provide quoted semicolon-separated instructions. (screen -c <name> <mem> \"<instructions>\")\n";
                 return false;
             }
 
-            // Remove quotation marks
             processInstructions.erase(std::remove(processInstructions.begin(), processInstructions.end(), '"'), processInstructions.end());
 
             std::stringstream ss(processInstructions);
             std::string command;
             int count = 0;
+
             while (std::getline(ss, command, ';'))
             {
-                if (!command.empty()) {
-                    ++count;
-                    
-                    // Trim whitespace from command
-                    command.erase(0, command.find_first_not_of(" \t"));
-                    command.erase(command.find_last_not_of(" \t") + 1);
-                    
-                    bool validCommand = false;
-                    
-                    if (command.find("print") == 0) {
-                        validCommand = true;
-                    }
-                    else if (command.find("declare") == 0) {
-                        validCommand = true;
-                    }
-                    else if (command.find("add") == 0) {
-                        validCommand = true;
-                    }
-                    else if (command.find("subtract") == 0) {
-                        validCommand = true;
-                    }
-                    else if (command.find("sleep") == 0) {
-                        validCommand = false;
-                    }
-                    else if (command.find("read") == 0) {
-                        validCommand = false;
-                    }
-                    else if (command.find("write") == 0) {
-                        validCommand = false;
-                    }
-                    
-                    if (!validCommand) {
-                        std::cout << "invalid command\n";
+                // Trim command
+                command.erase(0, command.find_first_not_of(" \t"));
+                command.erase(command.find_last_not_of(" \t") + 1);
+                if (command.empty()) continue;
+
+                ++count;
+
+                std::stringstream cmdStream(command);
+                std::string keyword;
+                cmdStream >> keyword;
+                std::transform(keyword.begin(), keyword.end(), keyword.begin(), ::toupper);
+
+                // Parse and validate each instruction
+                if (keyword == "PRINT") 
+                {
+                    std::string arg;
+                    if (!getline(cmdStream, arg) || arg.empty()) 
+                    {
+                        std::cout << "invalid command: PRINT requires a message\n";
                         return false;
                     }
                 }
+                else if (keyword == "DECLARE") 
+                {
+                    std::string varName;
+                    int value;
+                    if (!(cmdStream >> varName >> value)) 
+                    {
+                        std::cout << "invalid command: DECLARE requires <varName> <value>\n";
+                        return false;
+                    }
+                }
+                else if (keyword == "ADD" || keyword == "SUBTRACT") 
+                {
+                    std::string target, op1, op2;
+                    if (!(cmdStream >> target >> op1 >> op2)) 
+                    {
+                        std::cout << "invalid command: " << keyword << " requires <target> <op1> <op2>\n";
+                        return false;
+                    }
+                }
+                else if (keyword == "SLEEP") 
+                {
+                    int ticks;
+                    if (!(cmdStream >> ticks) || ticks < 0) 
+                    {
+                        std::cout << "invalid command: SLEEP requires a positive integer\n";
+                        return false;
+                    }
+                }
+                else if (keyword == "WRITE") 
+                {
+                    std::string address, varName;
+                    if (!(cmdStream >> address >> varName)) 
+                    {
+                        std::cout << "invalid command: WRITE requires <address> <varName>\n";
+                        return false;
+                    }
+                }
+                else if (keyword == "READ") 
+                {
+                    std::string varName, address;
+                    if (!(cmdStream >> varName >> address)) 
+                    {
+                        std::cout << "invalid command: READ requires <varName> <address>\n";
+                        return false;
+                    }
+                }
+                else 
+                {
+                    std::cout << "invalid command: unknown instruction `" << keyword << "`\n";
+                    return false;
+                }
             }
 
+            if (count < 1 || count > 50) 
+            {
+                std::cout << "invalid command: instruction count must be between 1 and 50\n";
+                return false;
+            }
+        
             if (count < 1 || count > 50)
             {
                 std::cout << "invalid command\n";

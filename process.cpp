@@ -5,6 +5,8 @@
 #include "commands/SubtractCommand.h"
 #include "commands/SleepCommand.h"
 #include "commands/ForCommand.h"
+#include "commands/ReadCommand.h"
+#include "commands/WriteCommand.h"
 #include <limits>
 #include <random>
 #include <map>
@@ -178,54 +180,76 @@ void Process::createCommandsFromInstructions(const std::string& instructions, in
 
     while (std::getline(ss, instruction, ';')) {
 
-        // Trim whitespace
-        int i = 0;
         instruction.erase(0, instruction.find_first_not_of(" \t"));
         instruction.erase(instruction.find_last_not_of(" \t") + 1);
-        
         if (instruction.empty()) continue;
-        
-        // Parse instruction and create command
-        if (instruction.find("print") == 0) 
+
+        std::stringstream tokenStream(instruction);
+        std::string keyword;
+        tokenStream >> keyword;
+
+        std::transform(keyword.begin(), keyword.end(), keyword.begin(), ::toupper);
+
+        if (keyword == "PRINT") 
         {
-            CommandList.push_back(std::make_shared<PrintCommand>(pid, "Hello world from " + name + "!"));
+            std::string message;
+            getline(tokenStream, message); // the rest of the line
+            CommandList.push_back(std::make_shared<PrintCommand>(pid, message));
         }
-        else if (instruction.find("declare") == 0) 
+        else if (keyword == "DECLARE") 
         {
-            std::string var = "var" + std::to_string(i);
-            CommandList.push_back(std::make_shared<DeclareCommand>(pid, var, val(rng)));
-            i++;
+            std::string varName;
+            int value;
+            tokenStream >> varName >> value;
+            CommandList.push_back(std::make_shared<DeclareCommand>(pid, varName, value));
         }
-        else if (instruction.find("add") == 0) 
+        else if (keyword == "ADD") 
         {
-            CommandList.push_back(AddCommand::generateRandom(pid));
+            std::string target, op1, op2;
+            tokenStream >> target >> op1 >> op2;
+            CommandList.push_back(std::make_shared<AddCommand>(pid, target, op1, op2));
         }
-        else if (instruction.find("subtract") == 0) 
+        else if (keyword == "SUBTRACT") 
         {
-            CommandList.push_back(SubtractCommand::generateRandom(pid));
+            std::string target, op1, op2;
+            tokenStream >> target >> op1 >> op2;
+            CommandList.push_back(std::make_shared<SubtractCommand>(pid, target, op1, op2));
         }
-        else if (instruction.find("sleep") == 0) 
+        else if (keyword == "SLEEP") 
         {
-            int ticks = sleepTicks(rng);
+            uint8_t ticks;
+            tokenStream >> ticks;
             CommandList.push_back(std::make_shared<SleepCommand>(pid, ticks));
         }
-        else if (instruction.find("for") == 0) 
+        else if (keyword == "FOR") 
         {
-            std::string bodyInstructions = instruction.substr(3);
+            std::string bodyInstructions;
+            getline(tokenStream, bodyInstructions);
             std::vector<std::shared_ptr<ICommand>> loopBody = generateLoopBody(pid, 1, 3, rng); // max depth 3
             int loopCount = std::uniform_int_distribution<int>(1, 5)(rng);
             CommandList.push_back(std::make_shared<ForCommand>(pid, loopBody, loopCount));
         }
-        else if (instruction.find("read") == 0) 
+
+        /*
+        else if (keyword == "READ") 
         {
-            //TODO: Implement read command
-            continue;
+            std::string varName, addressStr;
+            tokenStream >> varName >> addressStr;
+
+            uint32_t memAddress = std::stoul(addressStr, nullptr, 0); // supports 0x format
+            CommandList.push_back(std::make_shared<ReadCommand>(pid, varName, memAddress, this));
         }
-        else if (instruction.find("write") == 0) 
+        else if (keyword == "WRITE") 
         {
-            //TODO: Implement write command
-            continue;
+            std::string addressStr, varName;
+            tokenStream >> addressStr >> varName;
+
+            uint32_t memAddress = std::stoul(addressStr, nullptr, 0); // supports hex like 0x500
+            uint16_t value = this->getVariable(varName); // fetch from symbol table
+            CommandList.push_back(std::make_shared<WriteCommand>(pid, varName, memAddress, value, this));
         }
+
+        */
         else 
         {
             std::cout << "Invalid command in instructions: " << instruction << "\n";

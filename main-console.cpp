@@ -550,6 +550,8 @@ void MainConsole::printVMStats(){
     size_t totalMemUsed = 0; 
     std::unordered_map<size_t, std::pair<int, size_t>> pageMap = this->memoryAllocator->getPageMap(); //get all frames
      for (const auto& frame : pageMap){
+        std::cout << frame.first << " -> PID: " << frame.second.first 
+                  << ", Page: " << frame.second.second << "\n"; //debugging
         totalMemUsed += config.memoryPerFrame; 
     }
 

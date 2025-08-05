@@ -316,4 +316,67 @@ void* Process::getMemoryPtr() const {
     return memoryPtr;
 }
 
+bool Process::declareVariable(const std::string& name, uint16_t value) {
+    // Check if variable already declared
+    if (symbolTable.find(name) != symbolTable.end()) {
+        if (consolePtr) consolePtr->addLog("Variable '" + name + "' already declared. Ignoring redeclaration.");
+        return false;
+    }
+
+    // Check if symbol table is full
+    if (symbolTable.size() >= MAX_SYMBOL_TABLE_SIZE) {
+        if (consolePtr) consolePtr->addLog("Symbol table full. Ignoring declaration of variable: " + name);
+        return false;
+    }
+
+    // Clamp value between 0 and UINT16_MAX
+    value = std::min(value, static_cast<uint16_t>(std::numeric_limits<uint16_t>::max()));
+    symbolTable[name] = value;
+
+    if (consolePtr)
+        consolePtr->addLog("Declared variable '" + name + "' = " + std::to_string(value));
+    return true;
+}
+
+
+bool Process::hasVariable(const std::string& name) const {
+    return symbolTable.find(name) != symbolTable.end();
+}
+
+uint16_t Process::getVariable(const std::string& name) const {
+    auto it = symbolTable.find(name);
+    if (it != symbolTable.end()) {
+        return it->second;
+    }
+    if (consolePtr)
+        consolePtr->addLog("Variable '" + name + "' not found!");
+    return 0;
+}
+
+void Process::setVariable(const std::string& name, uint16_t value) {
+    if (!hasVariable(name)) {
+        if (consolePtr)
+            consolePtr->addLog("Variable '" + name + "' not declared!");
+        return;
+    }
+    value = std::min(value, static_cast<uint16_t>(std::numeric_limits<uint16_t>::max()));
+    symbolTable[name] = value;
+
+    if (consolePtr)
+        consolePtr->addLog("Updated variable '" + name + "' = " + std::to_string(value));
+}
+void Process::printSymbolTable() const {
+    std::cout << "Symbol Table for Process " << pid << " (" << name << "):\n";
+    if (symbolTable.empty()) {
+        std::cout << "  <empty>\n";
+        return;
+    }
+
+    for (const auto& [varName, value] : symbolTable) {
+        std::cout << "  " << varName << " = " << value << "\n";
+    }
+}
+
+
+
 

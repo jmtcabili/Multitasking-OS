@@ -20,6 +20,12 @@ public:
     std::vector<size_t> getFreeFrameList() override; 
     std::unordered_map<size_t, std::pair<int, size_t>> getPageMap() override;
 
+    uint16_t readUint16(uint32_t address) const;
+    void writeUint16(uint32_t address, uint16_t value);
+    size_t getMaxMemorySize() const;
+    const std::vector<uint8_t>& getPhysicalMemory() const;
+
+
 private:
     size_t maxMemorySize;
     size_t frameSize;
@@ -35,5 +41,9 @@ private:
     void evictPage();
     void writeToBackingStore(int pid, size_t pageNumber);
     void loadFromBackingStore(int pid, size_t pageNumber, int coreNum);
-    bool checkProcessFrames(Process *process) override; 
-};
+  
+    bool checkProcessFrames(Process *process) override;
+  
+    std::vector<uint8_t> physicalMemory;
+  
+  

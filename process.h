@@ -54,6 +54,18 @@ public:
     void setMemoryPtr(void* ptr);
     void* getMemoryPtr() const;
 
+    //symbol table management 
+    bool declareVariable(const std::string& name, uint16_t value);
+    bool hasVariable(const std::string& name) const;
+    uint16_t getVariable(const std::string& name) const;
+    void setVariable(const std::string& name, uint16_t value);
+    void printSymbolTable() const;
+    const std::unordered_map<std::string, uint16_t>& getSymbolTable() const {
+        return symbolTable;
+    }
+
+
+
 private: 
     int pid;
     std::string name;
@@ -71,5 +83,8 @@ private:
     size_t pageSize; 
     size_t numPages; 
 
+    //symbol table
+    static const size_t MAX_SYMBOL_TABLE_SIZE = 32;
+    std::unordered_map<std::string, uint16_t> symbolTable;
 
 };

@@ -12,6 +12,16 @@ PagingAllocator::PagingAllocator(size_t maxMemorySize, size_t frameSize)
     for (size_t i = 0; i < numFrames; ++i) {
         freeFrameList.push_back(i); // initialize free frame list
     }
+
+    physicalMemory.resize(maxMemorySize, 0); 
+    std::cout << "Free Frame List: ";
+    for (const auto& frame : freeFrameList) {
+        std::cout << frame << " ";
+    }
+    std::cout << std::endl;
+    std::cout << "numFrames: " << numFrames << std::endl;
+
+
 }
 
 void* PagingAllocator::allocate(Process *process) {
@@ -236,5 +246,25 @@ bool PagingAllocator::checkProcessFrames(Process *process){
         }
     }
    return pagesInFrame >= pagesNeeded; 
+}
+
+uint16_t PagingAllocator::readUint16(uint32_t address) const {
+    if (address + 1 >= physicalMemory.size()) return 0;
+    return (static_cast<uint16_t>(physicalMemory[address]) |
+            (static_cast<uint16_t>(physicalMemory[address + 1]) << 8));
+}
+
+void PagingAllocator::writeUint16(uint32_t address, uint16_t value) {
+    if (address + 1 >= physicalMemory.size()) return;
+    physicalMemory[address] = value & 0xFF;
+    physicalMemory[address + 1] = (value >> 8) & 0xFF;
+}
+
+size_t PagingAllocator::getMaxMemorySize() const {
+    return maxMemorySize;
+}
+
+const std::vector<uint8_t>& PagingAllocator::getPhysicalMemory() const {
+    return physicalMemory;
 }
 

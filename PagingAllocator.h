@@ -46,4 +46,4 @@ private:
   
     std::vector<uint8_t> physicalMemory;
   
-  
+};

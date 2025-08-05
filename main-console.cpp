@@ -153,6 +153,7 @@ void MainConsole::initialize(){
         std::cout << "Number of CPU Cores: " << this->config.numCores << std::endl;
         std::cout << "Scheduler Type: " << this->config.schedulerType << std::endl;
         std::cout << "Time Quantum: " << this->config.timeQuantum << std::endl;
+        std::cout << "Delay per exec: " << this->config.delay << std::endl; 
         std::cout << "Batch Process Frequency: " << this->config.batchFrequency << std::endl;
         std::cout << "Minimum Instructions: " << this->config.minInstructions << std::endl;
         std::cout << "Maximum Instructions: " << this->config.maxInstructions << std::endl;
@@ -295,10 +296,8 @@ void MainConsole::addProcesses() {
     int numProc = 0; 
     while (true) 
     {
-        if(this->shutdown || numProc >= 6) //remove in the future
+        if(this->shutdown || numProc >= 2) //remove in the future
         {
-            this->runningScheduler->wait();
-            this->runningScheduler->stop();
             break;
         }
 
@@ -308,7 +307,6 @@ void MainConsole::addProcesses() {
             std::this_thread::sleep_for(std::chrono::milliseconds(500)); 
             continue;
         }
-
         std::unique_lock<std::mutex> idLock(this->IDMtx); 
         std::string processName = "Main-Process" + std::to_string(this->processId);
 
@@ -366,7 +364,11 @@ void MainConsole::addProcesses() {
 //TODO: IMPLEMENT
 void MainConsole::stopScheduler(){
     this->shutdown = true;
+    std::cout << "signaled to stop\n"; 
+    this->runningScheduler->stop();
+    this->runningScheduler->wait();
 }
+    
 
 void MainConsole::generateReport() {
     if (!this->runningScheduler) {
@@ -439,8 +441,11 @@ void MainConsole::processSMI(){
     std::unordered_map<size_t, std::pair<int, size_t>> pageMap = this->memoryAllocator->getPageMap(); //get all frames
 
     for (const auto& frame : pageMap){
+        std::cout << "Frame: " << frame.first << " -> PID: " << frame.second.first 
+                  << ", Page: " << frame.second.second << "\n"; //debugging
         totalMemUsed += config.memoryPerFrame; 
     }
+
     double totalMemUsedMiB = static_cast<double>(totalMemUsed);
     double maxMemMiB = static_cast<double>(maxMem);
     double memoryUtilPercent = (maxMem > 0) ? (totalMemUsedMiB * 100.0 / maxMemMiB) : 0.0;

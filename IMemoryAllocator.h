@@ -19,4 +19,5 @@ public:
     virtual std::unordered_map<int, std::vector<size_t>> getPidOffsets() const = 0; 
     virtual std::vector<size_t> getFreeFrameList() = 0; // Get free frame list for debugging
     virtual std::unordered_map<size_t, std::pair<int, size_t>> getPageMap() = 0; // Get page map for debugging
+    virtual bool checkProcessFrames(Process *process) = 0;
 };

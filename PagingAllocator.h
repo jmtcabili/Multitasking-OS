@@ -35,4 +35,5 @@ private:
     void evictPage();
     void writeToBackingStore(int pid, size_t pageNumber);
     void loadFromBackingStore(int pid, size_t pageNumber, int coreNum);
+    bool checkProcessFrames(Process *process) override; 
 };

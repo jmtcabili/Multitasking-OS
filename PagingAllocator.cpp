@@ -220,5 +220,20 @@ std::unordered_map<int, std::vector<size_t>> PagingAllocator::getPidOffsets() co
  }
 
 std::unordered_map<size_t, std::pair<int, size_t>> PagingAllocator::getPageMap() {
+    //add mutex
+    std::lock_guard<std::mutex> lock(allocatorMutex); // Ensure thread safety
     return pageMap; // Return a copy of the page map
 }
+
+bool PagingAllocator::checkProcessFrames(Process *process){
+    std::lock_guard<std::mutex> lock(allocatorMutex);
+    size_t pagesNeeded = process->getNumPages(); 
+    size_t pagesInFrame = 0; 
+    for (const auto& [frameNum, pair] : pageMap) {
+        if (pair.first == process->getPID()){
+            pagesInFrame++; 
+        }
+    }
+   return pagesInFrame >= pagesNeeded; 
+}
+

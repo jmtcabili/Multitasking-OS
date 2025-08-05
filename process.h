@@ -47,6 +47,7 @@ public:
     void screenProcess(int delay); 
     void runScreenProcess(int delay);
     void generateTestCaseAlternatingCommands(int count);
+    void createCommandsFromInstructions(const std::string& instructions, int min, int max);
 
     //memory
     size_t getMemoryRequired() const;

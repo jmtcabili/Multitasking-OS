@@ -54,8 +54,13 @@ void Scheduler::coreWorker(int coreId)
             });
 
             if (shutdown && processQueue.empty()) {
-                cores[coreId] = nullptr;
+                if (cores[coreId] != nullptr) {
+                    // If this core is still running a process, deallocate it
+                    allocator->deallocate(cores[coreId]->getPID());
+                }
 
+                cores[coreId] = nullptr;
+                
                 // check if ALL cores are now idle
                 if (getUsedCores() == 0) {
                     break; // safe to exit this core
@@ -147,7 +152,6 @@ void Scheduler::coreWorker(int coreId)
                 for (int i = 0; i < timeQuantum && !currentProcess->isFinished(); ++i)
                 {
                     if (shutdown) {
-                        std::cout<< "Shutting down core " << coreId << std::endl;
                         break;
                     }
                     //std::cout << "Core " << coreId << " executing process: " << currentProcess->getName() << std::endl;
@@ -203,7 +207,6 @@ void Scheduler::stop()
     {
         std::unique_lock<std::mutex> lock(mtx); // Acquire lock
         this->shutdown = true; // Set shutdown flag
-        std::cout << "Stopping scheduler..." << std::endl;
     } // Lock is released here
     cv.notify_all(); // Notify all waiting core threads
 }

@@ -16,16 +16,14 @@ using namespace std;
 
 MainConsole::~MainConsole() {
     // Set shutdown flag to stop any running threads
-    shutdown = true;
+   shutdown = true;
     
-    // Stop scheduler if running
     if (runningScheduler) {
         runningScheduler->stop();
         runningScheduler->wait();
         runningScheduler.reset();
     }
-    
-    // Clean up screen consoles (they're already managed by unique_ptr)
+
     screenConsoles.clear();
 }
 
@@ -405,8 +403,8 @@ void MainConsole::addProcesses() {
     {
         if(this->shutdown) //remove in the future
         {
-            //this->runningScheduler->wait();
-            //this->runningScheduler->stop();
+            this->runningScheduler->stop();
+            this->runningScheduler->wait();
             break;
         }
 
@@ -471,12 +469,24 @@ void MainConsole::addProcesses() {
     }
 
 }
-//TODO: IMPLEMENT
+
 void MainConsole::stopScheduler(){
+  
+    if (!this->runningScheduler) {
+        std::cout << "No scheduler is currently running.\n";
+        return;
+    }
+    
+    // Set shutdown flag first to stop process generation
     this->shutdown = true;
-    std::cout << "signaled to stop\n"; 
-    this->runningScheduler->stop();
-    this->runningScheduler->wait();
+    
+
+    
+    // Note: The addProcesses thread should terminate automatically 
+    // when it checks this->shutdown in its loop
+    
+    std::cout << "Scheduler stopped successfully.\n";
+
 }
     
 

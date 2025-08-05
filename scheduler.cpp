@@ -2,6 +2,7 @@
 #include <sstream>
 #include <iomanip>
 #include "config.h"
+#include "VMstat.h"
 
 
 Scheduler::Scheduler(int count, const std::string& schedulerType, int timeQuantum, int delayPerInstruction, IMemoryAllocator* allocator)
@@ -78,6 +79,11 @@ void Scheduler::coreWorker(int coreId)
                     if (allocator->getFreeFrameList().size() == 0){
                         currentProcess->setMemoryPtr(nullptr); 
                         processQueue.push(currentProcess);
+                        {
+                        //update vmstat
+                        std::lock_guard<std::mutex> lock(vmstatMutex);
+                        vmstats.idleCPUticks += 1; // Increment active CPU ticks
+                        }
                         continue;
                     }
                     mem = allocator->allocate(currentProcess);
@@ -86,6 +92,11 @@ void Scheduler::coreWorker(int coreId)
                 }
 
                 if (mem == nullptr) {
+                    {
+                        //update vmstat
+                        std::lock_guard<std::mutex> lock(vmstatMutex);
+                        vmstats.idleCPUticks += 1; // Increment active CPU ticks
+                    }
                     processQueue.push(currentProcess);
                     cores[coreId] = nullptr;
                     continue;
@@ -96,6 +107,11 @@ void Scheduler::coreWorker(int coreId)
                     if (allocator->checkProcessFrames(currentProcess) == false){
                         processQueue.push(currentProcess);
                         cores[coreId] = nullptr;
+                        {
+                        //update vmstat
+                        std::lock_guard<std::mutex> lock(vmstatMutex);
+                        vmstats.idleCPUticks += 1; // Increment active CPU ticks
+                        }
                         continue;
                     }else{
                         cores[coreId] = currentProcess;
@@ -119,6 +135,11 @@ void Scheduler::coreWorker(int coreId)
                     currentProcess->executeCurrentCommand(coreId);
                     currentProcess->moveToNextLine();
                     std::this_thread::sleep_for(std::chrono::milliseconds(delayPerInstruction));
+                    {
+                        //update vmstat
+                        std::lock_guard<std::mutex> lock(vmstatMutex);
+                        vmstats.activeCPUticks += 1; // Increment active CPU ticks
+                    }
                 }
             }
             else if (schedulerType == "rr")
@@ -145,6 +166,11 @@ void Scheduler::coreWorker(int coreId)
                     std::unique_lock<std::mutex> lock(mtx);
                     quantumCounter++;
                 }
+                {
+                        //update vmstat
+                        std::lock_guard<std::mutex> lock(vmstatMutex);
+                        vmstats.activeCPUticks += 1; // Increment active CPU ticks
+                }
             }
 
             std::unique_lock<std::mutex> lock(mtx);
@@ -163,6 +189,11 @@ void Scheduler::coreWorker(int coreId)
 
             
             cores[coreId] = nullptr;
+            //update vmstat
+           
+        }else{
+                std::lock_guard<std::mutex> lock(vmstatMutex); 
+                vmstats.idleCPUticks+= 1; // Increment active CPU ticks
         }
     }
 }

@@ -1,5 +1,6 @@
 #include "PagingAllocator.h"
 #include "backingStore.h"
+#include "VMstat.h"
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -118,6 +119,9 @@ void PagingAllocator::writeToBackingStore(int pid, size_t pageNumber) {
                 out << line << "\n"; //write each line back
             }
             out.close(); //close file after writing
+            //update vmstat
+            std::lock_guard<std::mutex> vmLock(vmstatMutex);
+            vmstats.numPagedOut++; //increment page out count
         } else {
             std::cerr << "Page not found in backing store: PID " << pid << ", Page " << pageNumber << std::endl;
         }
@@ -169,6 +173,8 @@ void PagingAllocator::loadFromBackingStore(int pid, size_t pageNumber, int coreN
                 out << line << "\n"; //write each line back
             }
             out.close(); //close file after writing
+            std::lock_guard<std::mutex> vmLock(vmstatMutex);
+            vmstats.numPagedIn++; //increment page out count
         } else {
             std::cerr << "Page not found in backing store: PID " << pid << ", Page " << pageNumber << std::endl;
         }

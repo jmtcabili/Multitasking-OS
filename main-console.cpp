@@ -2,7 +2,9 @@
 #include <fstream>
 #include <string>
 #include <sstream>
+#include "VMstat.h"
 #include "main-console.h"
+
 
 #ifdef _WIN32
     #define CLEAR_COMMAND "cls"
@@ -35,7 +37,7 @@ bool isValidCommand(const std::string& cmd){
 
     if (cmd == "initialize" || (cmd.find("screen") == 0) || cmd == "scheduler-start" ||
         cmd == "scheduler-stop" ||  cmd == "report-util" || cmd == "clear" || cmd == "process-smi" ||
-        cmd == "exit") {
+        cmd == "vmstat" || cmd == "exit") {
         return true; // Valid command
     }
 
@@ -94,6 +96,7 @@ void MainConsole::handleCommand() { //handleCommand from MainConsole class
             else if(input == "scheduler-stop"){stopScheduler();} //stop the scheduler
             else if(input == "report-util"){generateReport();} //generate report
             else if(input == "process-smi"){processSMI();}
+            else if(input == "vmstat"){printVMStats();}
         }
     }
 }
@@ -162,6 +165,11 @@ void MainConsole::initialize(){
         std::cout << "Maxmimum Frame:  " << this->config.memoryPerFrame << std::endl;
         std::cout << "Min mem per Proc: " << this->config.minMemProc << std::endl;
         std::cout << "Max mem per Proc: " << this->config.maxMemProc << std::endl;
+
+        {
+            std::lock_guard<std::mutex> lock(vmstatMutex); 
+            vmstats.totalMemory = this->config.maxMemory;
+        }
 
         this->memoryAllocator = std::make_unique<PagingAllocator>(
             this->config.maxMemory,
@@ -520,6 +528,29 @@ void MainConsole::generateReport() {
     std::cout << "CPU utilization report saved to csopesy-log.txt\n";
     lock.unlock();
 }
+void MainConsole::printVMStats(){
+
+    if (!runningScheduler) {
+        std::cout << "Scheduler is not running. Please run 'scheduler-start' first.\n";
+        return;
+    }
+    size_t totalMemUsed = 0; 
+    std::unordered_map<size_t, std::pair<int, size_t>> pageMap = this->memoryAllocator->getPageMap(); //get all frames
+     for (const auto& frame : pageMap){
+        totalMemUsed += config.memoryPerFrame; 
+    }
+
+    std::cout << "\n--- VM Statistics at T = " << runningScheduler->currentTimestamp() << " ---\n\n";
+    std::lock_guard<std::mutex> lock(vmstatMutex); // Lock to safely access vmstats
+    std::cout << "Total Memory: " << vmstats.totalMemory << " MiB\n";
+    std::cout << "Used Memory: " << totalMemUsed << " MiB\n";
+    std::cout << "Free Memory: " << vmstats.totalMemory-totalMemUsed << " MiB\n";
+    std::cout << "Idle CPU Ticks: " << vmstats.idleCPUticks << "\n";
+    std::cout << "Active CPU Ticks: " << vmstats.activeCPUticks << "\n";
+    std::cout << "Total CPU Ticks: " << vmstats.activeCPUticks + vmstats.idleCPUticks << "\n";
+    std::cout << "Page Faults: " << vmstats.numPagedIn << "\n";
+    std::cout << "Page Swaps: " << vmstats.numPagedOut << "\n";
+}
 
 void MainConsole::processSMI(){
     //NOTE: only considers processes running in cores, not the ones made through screen -s / -c
@@ -538,8 +569,8 @@ void MainConsole::processSMI(){
     std::vector<string> smiProcesses; //store process names for output
     
     for (const auto& frame : pageMap){
-        std::cout << "Frame: " << frame.first << " -> PID: " << frame.second.first 
-                  << ", Page: " << frame.second.second << "\n"; //debugging
+        // std::cout << "Frame: " << frame.first << " -> PID: " << frame.second.first 
+        //           << ", Page: " << frame.second.second << "\n"; //debugging
         totalMemUsed += config.memoryPerFrame; 
     }
 
@@ -722,3 +753,4 @@ bool MainConsole::checkScreenInput(std::string& option, std::string& processName
     std::cout << "Invalid screen command. Use -s, -r, or -c.\n";
     return false;
 }
+

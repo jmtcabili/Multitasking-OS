@@ -15,7 +15,7 @@ A bash script is provided named `compile`. The file extension would change depen
 
 1. Make sure that you are in the correct folder. If not, kindly change the directory to `Multitasking-OS`.
  ```bash
-cd MO1
+cd Multitasking-OS
 ```
 2. Once you're in the folder, kindly run the following:
 

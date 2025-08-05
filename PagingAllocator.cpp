@@ -12,6 +12,8 @@ PagingAllocator::PagingAllocator(size_t maxMemorySize, size_t frameSize)
     for (size_t i = 0; i < numFrames; ++i) {
         freeFrameList.push_back(i); // initialize free frame list
     }
+
+    physicalMemory.resize(maxMemorySize, 0); 
 }
 
 void* PagingAllocator::allocate(Process *process) {

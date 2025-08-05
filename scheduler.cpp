@@ -73,26 +73,40 @@ void Scheduler::coreWorker(int coreId)
 
                 // Allocate memory if needed
                 //check if all pages are already there?
-                if (currentProcess->getMemoryPtr() == nullptr) {
-                    void* mem = nullptr;
-                    if (allocator->getFreeFrameList().size() == 0 && schedulerType == "fcfs"){
-                        break;
+                void* mem = nullptr;
+                if (currentProcess->getMemoryPtr() == nullptr && schedulerType == "fcfs") {
+                    if (allocator->getFreeFrameList().size() == 0){
+                        currentProcess->setMemoryPtr(nullptr); 
+                        processQueue.push(currentProcess);
+                        continue;
                     }
                     mem = allocator->allocate(currentProcess);
-                    if (mem == nullptr) {
-                        //std::cout << "Core " << coreId << " allocated memory for process: " << currentProcess->getPID() << std::endl;
+                } else{
+                    mem = allocator->allocate(currentProcess);
+                }
+
+                if (mem == nullptr) {
+                    processQueue.push(currentProcess);
+                    cores[coreId] = nullptr;
+                    continue;
+                }else {
+                    //std::cout << "Core " << coreId << " running: " << currentProcess->getPID() << std::endl;
+                    //when can it not run for rr? 
+                        //when the processes inside the cores take up all the frames 
+                    if (allocator->checkProcessFrames(currentProcess) == false){
                         processQueue.push(currentProcess);
                         cores[coreId] = nullptr;
                         continue;
-                    } else {
+                    }else{
                         cores[coreId] = currentProcess;
                         currentProcess->setMemoryPtr(mem);
-                    }
+                    }   
+                    
                 }
             }
         }
 
-        if (currentProcess)
+        if (currentProcess->getMemoryPtr())
         {
             // Mark as running
             currentProcess->setState(Process::RUNNING);
@@ -111,17 +125,25 @@ void Scheduler::coreWorker(int coreId)
             {
                 for (int i = 0; i < timeQuantum && !currentProcess->isFinished(); ++i)
                 {
-                    if (shutdown) break;
+                    if (shutdown) {
+                        std::cout<< "Shutting down core " << coreId << std::endl;
+                        break;
+                    }
+                    //std::cout << "Core " << coreId << " executing process: " << currentProcess->getName() << std::endl;
+                    if (allocator->checkProcessFrames(currentProcess) == false) 
+                    {
+                        break; // skip execution if process is not in memory
+                    }
                     currentProcess->executeCurrentCommand(coreId);
                     currentProcess->moveToNextLine();
                     std::this_thread::sleep_for(std::chrono::milliseconds(delayPerInstruction));
+                    //std::cout << cores[coreId]->getPID() << " running on core " << coreId << std::endl;
+                    //std::this_thread::sleep_for(std::chrono::milliseconds(3000)); // Simulate some delay for output clarity
                 }
 
                 {
                     std::unique_lock<std::mutex> lock(mtx);
                     quantumCounter++;
-
-                    allocator->snapshot(quantumCounter);
                 }
             }
 
@@ -139,6 +161,7 @@ void Scheduler::coreWorker(int coreId)
                 processQueue.push(currentProcess);  // RR puts it back if not finished
             }
 
+            
             cores[coreId] = nullptr;
         }
     }
@@ -148,7 +171,8 @@ void Scheduler::stop()
 {
     {
         std::unique_lock<std::mutex> lock(mtx); // Acquire lock
-        shutdown = true; // Set shutdown flag
+        this->shutdown = true; // Set shutdown flag
+        std::cout << "Stopping scheduler..." << std::endl;
     } // Lock is released here
     cv.notify_all(); // Notify all waiting core threads
 }

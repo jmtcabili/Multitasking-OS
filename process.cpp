@@ -230,14 +230,14 @@ void Process::createCommandsFromInstructions(const std::string& instructions, in
             CommandList.push_back(std::make_shared<ForCommand>(pid, loopBody, loopCount));
         }
 
-        /*
+
         else if (keyword == "READ") 
         {
             std::string varName, addressStr;
             tokenStream >> varName >> addressStr;
 
             uint32_t memAddress = std::stoul(addressStr, nullptr, 0); // supports 0x format
-            CommandList.push_back(std::make_shared<ReadCommand>(pid, varName, memAddress, this));
+            //CommandList.push_back(std::make_shared<ReadCommand>(pid, varName, memAddress, this));
         }
         else if (keyword == "WRITE") 
         {
@@ -246,10 +246,10 @@ void Process::createCommandsFromInstructions(const std::string& instructions, in
 
             uint32_t memAddress = std::stoul(addressStr, nullptr, 0); // supports hex like 0x500
             uint16_t value = this->getVariable(varName); // fetch from symbol table
-            CommandList.push_back(std::make_shared<WriteCommand>(pid, varName, memAddress, value, this));
+            //CommandList.push_back(std::make_shared<WriteCommand>(pid, varName, memAddress, value, this));
         }
 
-        */
+
         else 
         {
             std::cout << "Invalid command in instructions: " << instruction << "\n";

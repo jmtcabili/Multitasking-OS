@@ -215,26 +215,61 @@ void MainConsole::listProcesses() {
         return;
     }
 
-    int totalCores = config.numCores;
-    int usedCores = runningScheduler->getUsedCores();
-    int availableCores = totalCores - usedCores;
+    double totalCores = config.numCores;
+    double usedCores; 
+    double availableCores;
 
     // Calculate CPU utilization
-    int cpuUtilization = (totalCores > 0) ? (usedCores * 100 / totalCores) : 0;
 
     std::cout << "\n--- Current Screen Status at T = " << runningScheduler->currentTimestamp() << " ---\n\n";
+    auto running = runningScheduler->getRunningProcessDetails(); //running processes on core
+    std::unordered_map<int, std::vector<size_t>> pidOffsets = this->memoryAllocator->getPidOffsets(); //running process in memory
+    std::unordered_map<size_t, std::pair<int, size_t>> pageMap = this->memoryAllocator->getPageMap(); //get all frames
+    std::vector<string> frameProcesses; //store process names for output
+    std::vector<std::string> runningProcesses = runningScheduler->getRunningProcesses(); //store process names for output
 
+    double cpuUtilization; 
+    if (running.empty()) {
+        cout << "  None\n";
+    } else {
+        //compare running from scheduler and memory 
+        usedCores = 0; 
+        
+        for (const auto& pCore : running) {
+            int pid = pCore.first; 
+            size_t pagesNeeded = pidOffsets[pid].size(); //get number of pages needed by process
+            size_t pagesInFrame = 0; 
+            //check if num pages ni process = frames in pagemap
+            for (auto& frame : pageMap){
+                if (frame.second.first == pid) { //if frame belongs to process
+                    pagesInFrame++;                     
+                }
+            } 
+            if (pagesInFrame == pagesNeeded){
+                frameProcesses.push_back(pCore.second); 
+                usedCores++; 
+            }
+        }
+        availableCores = totalCores - usedCores; 
+        cpuUtilization = (totalCores > 0) ? (usedCores * 100 / totalCores) : 0;
+    }
     std::cout << "CPU Utilization:  " << cpuUtilization << "%\n";
     std::cout << "Cores Used:       " << usedCores << "\n";
     std::cout << "Cores Available:  " << availableCores << "\n";
 
     std::cout << "\nRunning Processes:\n";
-    auto running = runningScheduler->getRunningProcesses();
     if (running.empty()) {
         std::cout << "  None\n";
     } else {
-        for (const auto& p : running) {
-            std::cout << "  " << p << "\n";
+        for (const auto& p : runningProcesses) {
+            std::string line = p; 
+            std::istringstream iss(line);
+            std::string processName;
+            std::getline(iss, processName, ' ');
+            //if processName is in frameProcesses, print it
+            if (std::find(frameProcesses.begin(), frameProcesses.end(), processName) != frameProcesses.end()) {
+                std::cout << "  " << p << "\n";
+            }
         }
     }
 
@@ -296,7 +331,7 @@ void MainConsole::addProcesses() {
     int numProc = 0; 
     while (true) 
     {
-        if(this->shutdown || numProc >= 2) //remove in the future
+        if(this->shutdown || numProc >= 20) //remove in the future
         {
             break;
         }
@@ -319,6 +354,7 @@ void MainConsole::addProcesses() {
         size_t max = this->config.maxMemProc;
         size_t frameSize = this->config.memoryPerFrame;
         size_t processMem = min + rand() % (max - min + 1);
+
         
         Process* newProcess = new Process(this->processId, processName, screen, processMem, frameSize);
         newProcess->test_generateRandomCommands(min, max); 
@@ -430,16 +466,14 @@ void MainConsole::processSMI(){
     }
     
     int totalCores = config.numCores;
-    int usedCores = runningScheduler->getUsedCores();
-    int availableCores = totalCores - usedCores;
-    int cpuUtilization = (totalCores > 0) ? (usedCores * 100 / totalCores) : 0;
     size_t maxMem = config.maxMemory; 
     size_t totalMemUsed = 0; 
 
-    std::unordered_map<int, std::vector<size_t>> pidOffsets = this->memoryAllocator->getPidOffsets(); //running process in memory
-    //get mem used 
-    std::unordered_map<size_t, std::pair<int, size_t>> pageMap = this->memoryAllocator->getPageMap(); //get all frames
 
+    std::unordered_map<int, std::vector<size_t>> pidOffsets = this->memoryAllocator->getPidOffsets(); //running process in memory
+    std::unordered_map<size_t, std::pair<int, size_t>> pageMap = this->memoryAllocator->getPageMap(); //get all frames
+    std::vector<string> smiProcesses; //store process names for output
+    
     for (const auto& frame : pageMap){
         std::cout << "Frame: " << frame.first << " -> PID: " << frame.second.first 
                   << ", Page: " << frame.second.second << "\n"; //debugging
@@ -450,6 +484,32 @@ void MainConsole::processSMI(){
     double maxMemMiB = static_cast<double>(maxMem);
     double memoryUtilPercent = (maxMem > 0) ? (totalMemUsedMiB * 100.0 / maxMemMiB) : 0.0;
     auto running = runningScheduler->getRunningProcessDetails(); //running processes on core
+    double cpuUtilization; 
+    if (running.empty()) {
+        cout << "  None\n";
+    } else {
+        //compare running from scheduler and memory 
+        double usedCores = 0; 
+        
+        for (const auto& pCore : running) {
+            int pid = pCore.first; 
+            size_t pagesNeeded = pidOffsets[pid].size(); //get number of pages needed by process
+            size_t pagesInFrame = 0; 
+            //check if num pages ni process = frames in pagemap 
+            for (auto& frame : pageMap){
+                if (frame.second.first == pid) { //if frame belongs to process
+                    pagesInFrame++;                     
+                }
+            }
+            if (pagesInFrame == pagesNeeded){
+                smiProcesses.push_back(pCore.second + " " + std::to_string(pidOffsets[pid].size() * config.memoryPerFrame) + "MiB");
+                usedCores++; 
+            }
+        }
+        double availableCores = totalCores - usedCores; 
+        cpuUtilization = (totalCores > 0) ? (usedCores * 100 / totalCores) : 0;
+    }
+    cout << "\n\n";
 
     cout << "\n--- CPU Report at T = " << runningScheduler->currentTimestamp() << " ---\n\n";
 
@@ -465,21 +525,14 @@ void MainConsole::processSMI(){
     std::cout << "============================================\n";
     std::cout << "Running processes and memory usage:\n";
     std::cout << "--------------------------------------------\n";
-    
-    if (running.empty()) {
-        cout << "  None\n";
+    if (smiProcesses.empty()) {
+        std::cout << "  None\n";
     } else {
-        //compare running from scheduler and memory 
-        for (const auto& pCore : running) {
-            int pid = pCore.first; 
-            if (pidOffsets.count(pid) > 0) { //if running process in core is also found in running process in memory (ensure mutex on both ends)
-                cout << pCore.second << " " << pidOffsets[pid].size() * config.memoryPerFrame << "MiB\n";
-            } else{
-                cout << "Process in core is not in memory" << endl; 
-            }
+        for (const auto& proc : smiProcesses) {
+            std::cout << "  " << proc << "\n";
         }
     }
-    cout << "\n\n";
+    
 }
 
 bool MainConsole::checkScreenInput(std::string& option, std::string& processName, std::string& processMemory, std::string& processInstructions)

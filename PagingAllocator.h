@@ -16,7 +16,7 @@ public:
 
     void handlePageFault(int pid, size_t pageNumber);
     void snapshot(int quantum) const override;
-    std::unordered_map<int, std::vector<size_t>> getPidOffsets() const override;
+    std::unordered_map<int, std::vector<size_t>> getPidOffsets() override;
     std::vector<size_t> getFreeFrameList() override; 
     std::unordered_map<size_t, std::pair<int, size_t>> getPageMap() override;
 

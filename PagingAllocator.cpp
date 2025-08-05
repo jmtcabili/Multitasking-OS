@@ -211,7 +211,8 @@ void PagingAllocator::snapshot(int quantum) const {
  
 }
 
-std::unordered_map<int, std::vector<size_t>> PagingAllocator::getPidOffsets() const {
+std::unordered_map<int, std::vector<size_t>> PagingAllocator::getPidOffsets() {
+    std::lock_guard<std::mutex> lock(allocatorMutex);
     return pidToPages;
 }
 

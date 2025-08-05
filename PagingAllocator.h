@@ -16,8 +16,9 @@ public:
 
     void handlePageFault(int pid, size_t pageNumber);
     void snapshot(int quantum) const override;
-    std::unordered_map<int, std::vector<size_t>> getPidOffsets() const override;
+    std::unordered_map<int, std::vector<size_t>> getPidOffsets() override;
     std::vector<size_t> getFreeFrameList() override; 
+    std::unordered_map<size_t, std::pair<int, size_t>> getPageMap() override;
 
     uint16_t readUint16(uint32_t address) const;
     void writeUint16(uint32_t address, uint16_t value);
@@ -40,6 +41,9 @@ private:
     void evictPage();
     void writeToBackingStore(int pid, size_t pageNumber);
     void loadFromBackingStore(int pid, size_t pageNumber, int coreNum);
-
-    std::vector<uint8_t> physicalMemory; //basically the RAM right 
-};
+  
+    bool checkProcessFrames(Process *process) override;
+  
+    std::vector<uint8_t> physicalMemory;
+  
+  

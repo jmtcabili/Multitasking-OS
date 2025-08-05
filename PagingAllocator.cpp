@@ -221,7 +221,8 @@ void PagingAllocator::snapshot(int quantum) const {
  
 }
 
-std::unordered_map<int, std::vector<size_t>> PagingAllocator::getPidOffsets() const {
+std::unordered_map<int, std::vector<size_t>> PagingAllocator::getPidOffsets() {
+    std::lock_guard<std::mutex> lock(allocatorMutex);
     return pidToPages;
 }
 
@@ -229,7 +230,25 @@ std::unordered_map<int, std::vector<size_t>> PagingAllocator::getPidOffsets() co
     return freeFrameList; // Return a copy of the free frame list
  }
 
- uint16_t PagingAllocator::readUint16(uint32_t address) const {
+std::unordered_map<size_t, std::pair<int, size_t>> PagingAllocator::getPageMap() {
+    //add mutex
+    std::lock_guard<std::mutex> lock(allocatorMutex); // Ensure thread safety
+    return pageMap; // Return a copy of the page map
+}
+
+bool PagingAllocator::checkProcessFrames(Process *process){
+    std::lock_guard<std::mutex> lock(allocatorMutex);
+    size_t pagesNeeded = process->getNumPages(); 
+    size_t pagesInFrame = 0; 
+    for (const auto& [frameNum, pair] : pageMap) {
+        if (pair.first == process->getPID()){
+            pagesInFrame++; 
+        }
+    }
+   return pagesInFrame >= pagesNeeded; 
+}
+
+uint16_t PagingAllocator::readUint16(uint32_t address) const {
     if (address + 1 >= physicalMemory.size()) return 0;
     return (static_cast<uint16_t>(physicalMemory[address]) |
             (static_cast<uint16_t>(physicalMemory[address + 1]) << 8));
@@ -248,3 +267,4 @@ size_t PagingAllocator::getMaxMemorySize() const {
 const std::vector<uint8_t>& PagingAllocator::getPhysicalMemory() const {
     return physicalMemory;
 }
+

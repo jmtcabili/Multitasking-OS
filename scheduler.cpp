@@ -77,6 +77,7 @@ void Scheduler::coreWorker(int coreId)
                 if (currentProcess->getMemoryPtr() == nullptr && schedulerType == "fcfs") {
                     if (allocator->getFreeFrameList().size() == 0){
                         currentProcess->setMemoryPtr(nullptr); 
+                        processQueue.push(currentProcess);
                         continue;
                     }
                     mem = allocator->allocate(currentProcess);

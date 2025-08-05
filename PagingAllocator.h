@@ -19,6 +19,12 @@ public:
     std::unordered_map<int, std::vector<size_t>> getPidOffsets() const override;
     std::vector<size_t> getFreeFrameList() override; 
 
+    uint16_t readUint16(uint32_t address) const;
+    void writeUint16(uint32_t address, uint16_t value);
+    size_t getMaxMemorySize() const;
+    const std::vector<uint8_t>& getPhysicalMemory() const;
+
+
 private:
     size_t maxMemorySize;
     size_t frameSize;
@@ -35,5 +41,5 @@ private:
     void writeToBackingStore(int pid, size_t pageNumber);
     void loadFromBackingStore(int pid, size_t pageNumber, int coreNum);
 
-    std::vector<uint8_t> physicalMemory;
+    std::vector<uint8_t> physicalMemory; //basically the RAM right 
 };

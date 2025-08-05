@@ -60,7 +60,7 @@ public:
     uint16_t getVariable(const std::string& name) const;
     void setVariable(const std::string& name, uint16_t value);
     void printSymbolTable() const;
-    std::unordered_map<std::string, uint16_t>& getSymbolTable() {
+    const std::unordered_map<std::string, uint16_t>& getSymbolTable() const {
         return symbolTable;
     }
 

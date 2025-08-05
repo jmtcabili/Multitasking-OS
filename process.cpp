@@ -355,16 +355,24 @@ uint16_t Process::getVariable(const std::string& name) const {
 
 void Process::setVariable(const std::string& name, uint16_t value) {
     if (!hasVariable(name)) {
+        if (symbolTable.size() >= MAX_SYMBOL_TABLE_SIZE) {
+            if (consolePtr)
+                consolePtr->addLog("Cannot declare new variable '" + name + "' — symbol table full.");
+            return;
+        }
+        // Automatically declare variable if not present
+        symbolTable[name] = 0;
         if (consolePtr)
-            consolePtr->addLog("Variable '" + name + "' not declared!");
-        return;
+            consolePtr->addLog("Declared new variable '" + name + "'");
     }
+
     value = std::min(value, static_cast<uint16_t>(std::numeric_limits<uint16_t>::max()));
     symbolTable[name] = value;
 
     if (consolePtr)
         consolePtr->addLog("Updated variable '" + name + "' = " + std::to_string(value));
 }
+
 void Process::printSymbolTable() const {
     std::cout << "Symbol Table for Process " << pid << " (" << name << "):\n";
     if (symbolTable.empty()) {

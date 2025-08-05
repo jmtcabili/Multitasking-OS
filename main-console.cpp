@@ -286,9 +286,10 @@ void MainConsole::listProcesses() {
         return;
     }
 
-    double totalCores = config.numCores;
-    double usedCores; 
-    double availableCores;
+    double totalCores = static_cast<double>(config.numCores);
+    double usedCores = 0; 
+    double availableCores = totalCores-usedCores;
+
 
     // Calculate CPU utilization
 
@@ -299,7 +300,7 @@ void MainConsole::listProcesses() {
     std::vector<string> frameProcesses; //store process names for output
     std::vector<std::string> runningProcesses = runningScheduler->getRunningProcesses(); //store process names for output
 
-    double cpuUtilization; 
+    double cpuUtilization = 0.00; 
     if (running.empty()) {
         cout << "  None\n";
     } else {
@@ -504,7 +505,7 @@ void MainConsole::generateReport() {
 
     std::unique_lock<std::mutex> lock(schedulerMtx); // Ensure thread safety
 
-    int totalCores = config.numCores;
+    int totalCores = static_cast<double>(config.numCores);
     int usedCores = runningScheduler->getUsedCores();
     int availableCores = totalCores - usedCores;
     int cpuUtilization = (totalCores > 0) ? (usedCores * 100 / totalCores) : 0;
@@ -550,8 +551,8 @@ void MainConsole::printVMStats(){
     size_t totalMemUsed = 0; 
     std::unordered_map<size_t, std::pair<int, size_t>> pageMap = this->memoryAllocator->getPageMap(); //get all frames
      for (const auto& frame : pageMap){
-        std::cout << frame.first << " -> PID: " << frame.second.first 
-                  << ", Page: " << frame.second.second << "\n"; //debugging
+        // std::cout << frame.first << " -> PID: " << frame.second.first 
+        //           << ", Page: " << frame.second.second << "\n"; //debugging
         totalMemUsed += config.memoryPerFrame; 
     }
 
@@ -569,12 +570,8 @@ void MainConsole::printVMStats(){
 
 void MainConsole::processSMI(){
     //NOTE: only considers processes running in cores, not the ones made through screen -s / -c
-    if (!runningScheduler) {
-        std::cout << "Scheduler is not running. Please run 'scheduler-start' first.\n";
-        return;
-    }
     
-    int totalCores = config.numCores;
+    int totalCores =static_cast<double>(config.numCores);
     size_t maxMem = config.maxMemory; 
     size_t totalMemUsed = 0; 
 
@@ -593,7 +590,7 @@ void MainConsole::processSMI(){
     double maxMemMiB = static_cast<double>(maxMem);
     double memoryUtilPercent = (maxMem > 0) ? (totalMemUsedMiB * 100.0 / maxMemMiB) : 0.0;
     auto running = runningScheduler->getRunningProcessDetails(); //running processes on core
-    double cpuUtilization; 
+    double cpuUtilization = 0; 
     if (running.empty()) {
         cout << "  None\n";
     } else {

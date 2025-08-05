@@ -15,10 +15,10 @@ PagingAllocator::PagingAllocator(size_t maxMemorySize, size_t frameSize)
     }
 
     physicalMemory.resize(maxMemorySize, 0); 
-    std::cout << "Free Frame List: ";
-    for (const auto& frame : freeFrameList) {
-        std::cout << frame << " ";
-    }
+    // std::cout << "Free Frame List: ";
+    // for (const auto& frame : freeFrameList) {
+    //     std::cout << frame << " ";
+    // }
     std::cout << std::endl;
     std::cout << "numFrames: " << numFrames << std::endl;
 

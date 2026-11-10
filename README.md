@@ -39,19 +39,6 @@ main.exe
 
 > `run.bat` is the Windows build script: it compiles the project into `main.exe`.
 
-### Building on Linux
-
-The sources include `VMstat.h`, but the file is named `vmstat.h`. This works on case-insensitive filesystems (macOS, Windows) but fails on Linux. `screen-console.h` also uses `std::vector` without including `<vector>`. To build on Linux without editing the sources:
-
-```bash
-ln -s vmstat.h VMstat.h
-g++ -std=c++20 -include vector -include algorithm -include memory -include unordered_map -I. \
-    main.cpp main-console.cpp screen-console.cpp scheduler.cpp process.cpp globals.cpp PagingAllocator.cpp \
-    commands/AddCommand.cpp commands/DeclareCommand.cpp commands/ForCommand.cpp \
-    commands/PrintCommand.cpp commands/SleepCommand.cpp commands/SubtractCommand.cpp \
-    -o main
-```
-
 ## Configuration
 
 On `initialize`, the emulator reads `config.txt` (one `key value` pair per line):
